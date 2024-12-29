@@ -108,7 +108,7 @@ if __name__ == '__main__':
     model = smplx.create(**model_params)
     model = model.to(device=device)
     sign_connector = MLP(input_dim=len(joint_idx)*3*2+len(joint_idx))
-    sign_connector.load_state_dict(torch.load('data/connector.pth'), strict=True)
+    sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth', map_location='cuda:0'), strict=True)
     sign_connector.to(device)
     sign_connector.eval()
 
@@ -126,23 +126,23 @@ if __name__ == '__main__':
         vposer.eval()
 
     #-----------------------------------------------------Prepare Dict---------------------------------------------
-    with open('data/Phoenix-2014T_all.pkl', 'rb') as f:
+    with open('../../data/tvb_all.pkl', 'rb') as f:
         render_results_all = pickle.load(f)
-    gloss2items_path = 'data/gloss2items.pkl'
+    gloss2items_path = '../../data/gloss2items.pkl'
     with open(gloss2items_path, 'rb') as f:
         gloss2items = pickle.load(f)
     t2g_results = {}
-    with open('data/T2G_results.pkl', 'rb') as f:
+    with open('../../data/T2G_results_clean_cc_dev.pkl', 'rb') as f:
         res = pickle.load(f)
         t2g_results.update(res)
 
-    with open('data/phoenix_dev.pkl', 'rb') as f:
+    with open('../../data/tvb_dev.pkl', 'rb') as f:
         video_ids = pickle.load(f)
     init_idx = args['init_idx']
     num_per_proc = args['num_per_proc']
     start_idx = init_idx
     end_idx = start_idx + num_per_proc
-    video_ids = video_ids[start_idx:end_idx]
+    # video_ids = video_ids[start_idx:end_idx]
 
     for video_id in tqdm(video_ids):
         glosses_translated = t2g_results[video_id]['gls_hyp'].split()

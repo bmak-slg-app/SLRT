@@ -39,6 +39,7 @@ from torch.nn import functional as F
 import numpy as np
 
 import torchgeometry as tgm
+# import kornia.geometry.conversions as tgm
 
 class ContinousRotReprDecoder(nn.Module):
     def __init__(self):
