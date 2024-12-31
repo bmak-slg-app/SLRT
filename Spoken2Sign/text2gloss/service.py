@@ -53,8 +53,8 @@ class T2GService:
         dataset = SignLanguageDataset(cfg["data"]["tvb"], "dev")
         self.dataset = dataset
 
-    def translate(self, task_id: int, text: str):
-        custom_dataset = [({'name': f'custom-input-{task_id}',
+    def translate(self, text: str):
+        custom_dataset = [({'name': 'custom-input',
         'gloss': '',
         'text': text},
         'tvb')]

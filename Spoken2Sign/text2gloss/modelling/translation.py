@@ -200,7 +200,7 @@ class TranslationNetwork(torch.nn.Module):
         elif self.input_type == 'text':
             input_ids = kwargs.pop('input_ids')
             # print(input_ids)
-            kwargs['inputs_embeds'] = self.text_embedding[input_ids].to(input_ids.device) * self.input_embed_scale
+            kwargs['inputs_embeds'] = self.text_embedding.to(input_ids.device)[input_ids] * self.input_embed_scale
         # else:
             # raise ValueError
         # print(kwargs['attention_mask'])

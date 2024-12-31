@@ -1,14 +1,18 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from service import Spoken2SignService
+from service import Spoken2SignService, RenderAvatarService
 import requests
 
 from enum import Enum
 import time
 
 app = FastAPI()
+app.mount('/static', StaticFiles(directory="videos"), name="static")
 
 spoken2signservice = Spoken2SignService()
+renderavatarservice = RenderAvatarService()
 
 status_map = {}
 
@@ -33,6 +37,9 @@ def process_request(task_id: int, text: str):
     print(f'[DEBUG] T2G: {text} -> {gloss}')
     status_map[task_id] = TaskStatus.running_s2s
     spoken2signservice.generate(task_id, gloss)
+    status_map[task_id] = TaskStatus.rendering
+    # renderavatarservice = RenderAvatarService()
+    # renderavatarservice.render_images(task_id)
     status_map[task_id] = TaskStatus.completed
 
 
@@ -55,3 +62,8 @@ def get_status(task_id: int) -> Spoken2SignTask:
     if task_id not in status_map:
         raise HTTPException(status_code=404, detail="Task not found")
     return Spoken2SignTask(id=task_id, status=status_map[task_id])
+
+@app.get("/spoken2sign/{task_id}")
+def get_video(task_id: int):
+    # replace with MinIO later
+    return RedirectResponse(f"/static/custom-input-{task_id}.mp4")

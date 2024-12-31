@@ -221,3 +221,87 @@ class Spoken2SignService:
                 fname = os.path.join(save_dir, str(i).zfill(3)+'_inter.pkl')
             with open(fname, 'wb') as f:
                 pickle.dump(est_params_all[i], f)
+
+
+import bpy
+import ffmpeg
+
+class RenderAvatarService:
+    def __init__(
+            self,
+            blender_addon_path: str = '../pretrained_models/smplx_blender_addon_300_20220623.zip',
+            blender_mainfile: str = '../pretrained_models/smplx_tommy.blend',
+            motions_dir: str = './motions',
+            images_dir: str = './images',
+            videos_dir: str = './videos',
+            ):
+        bpy.ops.preferences.addon_install(filepath = blender_addon_path, overwrite = True)
+        bpy.ops.preferences.addon_enable(module = 'smplx_blender_addon')
+        bpy.ops.wm.save_userpref()
+        bpy.ops.wm.open_mainfile(filepath=blender_mainfile)
+
+        path = os.path.abspath('../pretrained_models/smplx_blender_addon/data')
+        bpy.ops.file.find_missing_files(directory=path)
+
+        bpy.data.scenes['Scene'].render.resolution_y = 512
+        bpy.data.scenes['Scene'].render.resolution_x = 512
+        bpy.data.scenes['Scene'].render.fps = 60
+        # bpy.data.objects["Camera"].location[0] = -0.02
+        bpy.data.objects["Camera"].location[1] = -0.85 #-0.725
+        bpy.data.objects["Camera"].location[2] = 0.155
+        bpy.context.scene.render.image_settings.file_format = 'PNG'
+        bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+
+        bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+
+        self.motions_dir = motions_dir
+        self.videos_dir = videos_dir
+        self.images_dir = images_dir
+    
+    def render_video(self, task_id: int):
+        video_id = f"custom-input-{task_id}"
+        motion_path = os.path.join(self.motions_dir, video_id)
+        motion_lst = os.listdir(motion_path)
+        motion_lst.sort()
+
+        current_frame = 0
+        for i in range(len(motion_lst)):
+            fname = os.path.join(motion_path, motion_lst[i])
+            bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+            bpy.ops.object.smplx_load_pose(filepath=fname)
+            bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+            bpy.ops.object.posemode_toggle()
+            bpy.ops.object.mode_set(mode='POSE')
+            bpy.ops.pose.select_all(action='SELECT')
+            bpy.ops.anim.keyframe_insert()
+            current_frame += 5
+
+        vid_fname = os.path.join(self.videos_dir, f"{video_id}.mp4")
+        video_dir = os.path.dirname(vid_fname)
+        if not os.path.exists(video_dir):
+            os.makedirs(video_dir)
+        bpy.data.scenes['Scene'].render.filepath = vid_fname
+        bpy.data.scenes["Scene"].frame_end = current_frame
+        bpy.ops.render.render(animation=True)
+    
+    def render_images(self, task_id: int):
+        video_id = f"custom-input-{task_id}"
+        motion_path = os.path.join(self.motions_dir, video_id)
+        motion_lst = os.listdir(motion_path)
+        motion_lst.sort()
+
+        img_dir = os.path.join(self.images_dir, video_id)
+        os.makedirs(img_dir, exist_ok=True)
+
+        for i in range(len(motion_lst)):
+            fname = os.path.join(motion_path, motion_lst[i])
+            bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+            bpy.ops.object.smplx_load_pose(filepath=fname)
+            bpy.ops.render.render()
+            bpy.data.images["Render Result"].save_render(os.path.join(img_dir, f"{i:03}.png"))
+        
+        vid_fname = os.path.join(self.videos_dir, f"{video_id}.mp4")
+        video_dir = os.path.dirname(vid_fname)
+        if not os.path.exists(video_dir):
+            os.makedirs(video_dir)
+        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=25).output(vid_fname).run()
