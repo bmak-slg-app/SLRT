@@ -4,6 +4,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from service import Spoken2SignService, RenderAvatarService
 import requests
+import valkey
+import json
 
 from enum import Enum
 import time
@@ -12,35 +14,37 @@ app = FastAPI()
 app.mount('/static', StaticFiles(directory="videos"), name="static")
 
 spoken2signservice = Spoken2SignService()
-renderavatarservice = RenderAvatarService()
+# renderavatarservice = RenderAvatarService()
 
-status_map = {}
+valkey_client = valkey.Valkey(host='localhost', port=6379, db=0)
 
 class TaskStatus(str, Enum):
     in_queue = 'in_queue'
     running_t2g = 'running_t2g'
     running_s2s = 'running_s2s'
+    generated = 'generated'
     rendering = 'rendering'
     completed = 'completed'
     error = 'error'
 
 
 def process_request(task_id: int, text: str):
-    status_map[task_id] = TaskStatus.running_t2g
+    valkey_client.set(f'task:{task_id}:status', TaskStatus.running_t2g)
     response = requests.post('http://localhost:8081/t2g', json={'text': text})
     if response.status_code != 200:
         print('[ERROR] failed to perform request to T2G backend')
-        status_map[task_id] = TaskStatus.error
+        valkey_client.set(f'task:{task_id}:status', TaskStatus.error)
         return
     result = response.json()
     gloss = result['gloss']
-    print(f'[DEBUG] T2G: {text} -> {gloss}')
-    status_map[task_id] = TaskStatus.running_s2s
-    spoken2signservice.generate(task_id, gloss)
-    status_map[task_id] = TaskStatus.rendering
-    # renderavatarservice = RenderAvatarService()
-    # renderavatarservice.render_images(task_id)
-    status_map[task_id] = TaskStatus.completed
+    valkey_client.set(f'task:{task_id}:gloss', gloss)
+    print(f'[DEBUG] T2G task {task_id}: {text} -> {gloss}')
+    valkey_client.set(f'task:{task_id}:status', TaskStatus.running_s2s)
+    result = spoken2signservice.generate(task_id, gloss)
+    valkey_client.set(f'task:{task_id}:gloss_frame_mapping', json.dumps(result.gloss_frame_mapping))
+    print(f"[DEBUG] Generate task {task_id}: {result.gloss_frame_mapping}")
+    valkey_client.set(f'task:{task_id}:status', TaskStatus.generated)
+    valkey_client.lpush(f'render:jobs', task_id)
 
 
 class Spoken2SignRequest(BaseModel):
@@ -50,20 +54,46 @@ class Spoken2SignTask(BaseModel):
     id: int
     status: TaskStatus
 
+class Spoken2SignResult(BaseModel):
+    id: int
+    text: str
+    gloss: str
+    gloss_frame_mapping: list[int]
+    video_url: str
+
+@app.get("/healthz")
+async def healthz() -> str:
+    return "OK"
+
 @app.post("/spoken2sign")
 def spoken2sign(request: Spoken2SignRequest, background_tasks: BackgroundTasks) -> Spoken2SignTask:
     task_id = int(time.time())
-    status_map[task_id] = TaskStatus.in_queue
+    valkey_client.set(f'task:{task_id}:status', TaskStatus.in_queue)
+    valkey_client.set(f'task:{task_id}:text', request.text)
     background_tasks.add_task(process_request, task_id, request.text)
     return Spoken2SignTask(id=task_id, status=TaskStatus.in_queue)
 
 @app.get("/spoken2sign/{task_id}/status")
 def get_status(task_id: int) -> Spoken2SignTask:
-    if task_id not in status_map:
+    status = valkey_client.get(f'task:{task_id}:status')
+    if not status:
         raise HTTPException(status_code=404, detail="Task not found")
-    return Spoken2SignTask(id=task_id, status=status_map[task_id])
+    return Spoken2SignTask(id=task_id, status=status)
 
-@app.get("/spoken2sign/{task_id}")
+@app.get("/spoken2sign/{task_id}/video")
 def get_video(task_id: int):
     # replace with MinIO later
     return RedirectResponse(f"/static/custom-input-{task_id}.mp4")
+
+@app.get("/spoken2sign/{task_id}")
+def get_result(task_id: int) -> Spoken2SignResult:
+    text = valkey_client.get(f'task:{task_id}:text')
+    gloss = valkey_client.get(f'task:{task_id}:gloss')
+    gloss_frame_mapping = json.loads(valkey_client.get(f'task:{task_id}:gloss_frame_mapping'))
+    return Spoken2SignResult(
+        id=task_id,
+        text=text,
+        gloss=gloss,
+        gloss_frame_mapping=gloss_frame_mapping,
+        video_url=f"/static/custom-input-{task_id}.mp4",
+    )

@@ -9,6 +9,11 @@ import os
 from cmd_parser import parse_config
 from sign_connector_train import MLP
 from human_body_prior.tools.model_loader import load_vposer
+from pydantic import BaseModel
+
+class GenerateResult(BaseModel):
+    gloss: str
+    gloss_frame_mapping: list[int]
 
 dtype = torch.float32
 
@@ -84,7 +89,7 @@ class Spoken2SignService:
             gloss2items = pickle.load(f)
         self.gloss2items = gloss2items
 
-    def generate(self, task_id: int, gloss: str):
+    def generate(self, task_id: int, gloss: str) -> GenerateResult:
         video_id = f"custom-input-{task_id}"
         glosses_translated = gloss.split()
         clips = []
@@ -96,9 +101,11 @@ class Spoken2SignService:
         
         est_params_all = []
         inter_flag = []
+        gloss_frame_mapping = []
         for id_idx in range(len(clips)):
             render_id = clips[id_idx]['video_file']
             render_results = self.render_results_all[render_id]
+            gloss_frame_mapping.append(len(est_params_all))
 
             for pkl_idx in range(clips[id_idx]['start'], clips[id_idx]['end']):
                 data = render_results[pkl_idx]
@@ -221,6 +228,11 @@ class Spoken2SignService:
                 fname = os.path.join(save_dir, str(i).zfill(3)+'_inter.pkl')
             with open(fname, 'wb') as f:
                 pickle.dump(est_params_all[i], f)
+        
+        return GenerateResult(
+            gloss=gloss,
+            gloss_frame_mapping=gloss_frame_mapping,
+        )
 
 
 import bpy
