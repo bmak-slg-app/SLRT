@@ -10,6 +10,7 @@ from cmd_parser import parse_config
 from sign_connector_train import MLP
 from human_body_prior.tools.model_loader import load_vposer
 from pydantic import BaseModel
+from collections.abc import Callable
 
 class GenerateResult(BaseModel):
     gloss: str
@@ -296,7 +297,7 @@ class RenderAvatarService:
         bpy.data.scenes["Scene"].frame_end = current_frame
         bpy.ops.render.render(animation=True)
     
-    def render_images(self, task_id: int):
+    def render_images(self, task_id: int, progress_callback: Callable[[float], None]=None):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
         motion_lst = os.listdir(motion_path)
@@ -311,6 +312,8 @@ class RenderAvatarService:
             bpy.ops.object.smplx_load_pose(filepath=fname)
             bpy.ops.render.render()
             bpy.data.images["Render Result"].save_render(os.path.join(img_dir, f"{i:03}.png"))
+            if progress_callback is not None:
+                progress_callback((i + 1) / len(motion_lst))
         
         vid_fname = os.path.join(self.videos_dir, f"{video_id}.mp4")
         video_dir = os.path.dirname(vid_fname)

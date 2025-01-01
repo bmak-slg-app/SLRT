@@ -1,8 +1,9 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Security
+from fastapi.security import APIKeyHeader
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from service import Spoken2SignService, RenderAvatarService
+from service import Spoken2SignService
 import requests
 import valkey
 import json
@@ -10,11 +11,12 @@ import json
 from enum import Enum
 import time
 
+api_key_header = APIKeyHeader(name="X-API-Key")
+
 app = FastAPI()
 app.mount('/static', StaticFiles(directory="videos"), name="static")
 
 spoken2signservice = Spoken2SignService()
-# renderavatarservice = RenderAvatarService()
 
 valkey_client = valkey.Valkey(host='localhost', port=6379, db=0)
 
@@ -53,6 +55,7 @@ class Spoken2SignRequest(BaseModel):
 class Spoken2SignTask(BaseModel):
     id: int
     status: TaskStatus
+    progress: float
 
 class Spoken2SignResult(BaseModel):
     id: int
@@ -68,17 +71,25 @@ async def healthz() -> str:
 @app.post("/spoken2sign")
 def spoken2sign(request: Spoken2SignRequest, background_tasks: BackgroundTasks) -> Spoken2SignTask:
     task_id = int(time.time())
+    valkey_client.lpush("task:list", task_id)
     valkey_client.set(f'task:{task_id}:status', TaskStatus.in_queue)
+    valkey_client.set(f'task:{task_id}:progress', 0.0)
     valkey_client.set(f'task:{task_id}:text', request.text)
     background_tasks.add_task(process_request, task_id, request.text)
-    return Spoken2SignTask(id=task_id, status=TaskStatus.in_queue)
+    return Spoken2SignTask(id=task_id, status=TaskStatus.in_queue, progress=0.0)
 
 @app.get("/spoken2sign/{task_id}/status")
 def get_status(task_id: int) -> Spoken2SignTask:
     status = valkey_client.get(f'task:{task_id}:status')
+    progress = float(valkey_client.get(f'task:{task_id}:progress').decode())
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
-    return Spoken2SignTask(id=task_id, status=status)
+    return Spoken2SignTask(id=task_id, status=status, progress=progress)
+
+@app.get("/spoken2sign/status")
+def list_tasks() -> list[Spoken2SignTask]:
+    task_list = valkey_client.lrange('task:list', 0, -1)
+    return [get_status(int(task.decode())) for task in task_list]
 
 @app.get("/spoken2sign/{task_id}/video")
 def get_video(task_id: int):
@@ -97,3 +108,8 @@ def get_result(task_id: int) -> Spoken2SignResult:
         gloss_frame_mapping=gloss_frame_mapping,
         video_url=f"/static/custom-input-{task_id}.mp4",
     )
+
+@app.get("/spoken2sign")
+def list_result() -> list[Spoken2SignResult]:
+    status = list_tasks()
+    return [get_result(task.id) for task in status if task.status == TaskStatus.completed]

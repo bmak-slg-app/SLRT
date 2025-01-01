@@ -4,3 +4,9 @@ services:
     restart: always
     ports:
       - "6379:6379"
+  # cloudflared:
+  #   image: "cloudflare/cloudflared:latest"
+  #   command: tunnel run
+  #   network_mode: bridge
+  #   env_file:
+  #     - .env
