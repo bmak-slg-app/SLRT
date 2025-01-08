@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 class GenerateResult(BaseModel):
     gloss: str
-    gloss_frame_mapping: list[int]
+    gloss_frame_mapping: list[list[int]]
 
 dtype = torch.float32
 
@@ -106,7 +106,7 @@ class Spoken2SignService:
         for id_idx in range(len(clips)):
             render_id = clips[id_idx]['video_file']
             render_results = self.render_results_all[render_id]
-            gloss_frame_mapping.append(len(est_params_all))
+            start_frame = len(est_params_all)
 
             for pkl_idx in range(clips[id_idx]['start'], clips[id_idx]['end']):
                 data = render_results[pkl_idx]
@@ -118,6 +118,8 @@ class Spoken2SignService:
                         est_params[key] = val
                 est_params_all.append(est_params)
                 inter_flag.append(False)
+            end_frame = len(est_params_all)
+            gloss_frame_mapping.append([start_frame, end_frame])
 
             if id_idx != len(clips)-1:
                 clip_pre, clip_nex = clips[id_idx], clips[id_idx+1]
@@ -235,9 +237,21 @@ class Spoken2SignService:
             gloss_frame_mapping=gloss_frame_mapping,
         )
 
+frame_rate = 12
 
 import bpy
 import ffmpeg
+import math
+
+def format_timestamp(time: float):
+    milliseconds = math.floor((time - math.floor(time)) * 1000)
+    seconds = math.floor(time)
+    minutes = seconds // 60
+    seconds %= 60
+    hours = minutes // 60
+    minutes %= 60
+    formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
+    return formatted_time
 
 class RenderAvatarService:
     def __init__(
@@ -270,6 +284,23 @@ class RenderAvatarService:
         self.motions_dir = motions_dir
         self.videos_dir = videos_dir
         self.images_dir = images_dir
+
+    def generate_subtitles(self, task_id: int, gloss: str, gloss_frame_mapping: list[int]):
+        video_id = f"custom-input-{task_id}"
+        subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
+        video_dir = os.path.dirname(subtitle_fname)
+        if not os.path.exists(video_dir): # video id may contains slash
+            os.makedirs(video_dir)
+        gloss_lst = gloss.split()
+        with open(subtitle_fname, "w") as subtitle_file:
+            for i, (gloss_item, frame_map) in enumerate(zip(gloss_lst, gloss_frame_mapping)):
+                subtitle_file.write(f"{i + 1}\n")
+                start_frame, end_frame = frame_map
+                start_time = start_frame / frame_rate
+                end_time = end_frame / frame_rate
+                subtitle_file.write(f"{format_timestamp(start_time)} --> {format_timestamp(end_time)}\n")
+                subtitle_file.write(f"{gloss_item}\n\n")
+        print(f"[INFO] subtitle for {video_id} generated at {subtitle_fname}")
     
     def render_video(self, task_id: int):
         video_id = f"custom-input-{task_id}"
@@ -316,7 +347,8 @@ class RenderAvatarService:
                 progress_callback((i + 1) / len(motion_lst))
         
         vid_fname = os.path.join(self.videos_dir, f"{video_id}.mp4")
+        subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
         video_dir = os.path.dirname(vid_fname)
         if not os.path.exists(video_dir):
             os.makedirs(video_dir)
-        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=25).output(vid_fname).run()
+        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname, vf=f"subtitles={subtitle_fname}").run()

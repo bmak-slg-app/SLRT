@@ -61,7 +61,7 @@ class Spoken2SignResult(BaseModel):
     id: int
     text: str
     gloss: str
-    gloss_frame_mapping: list[int]
+    gloss_frame_mapping: list[list[int]]
     video_url: str
 
 @app.get("/healthz")
