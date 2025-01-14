@@ -5,7 +5,8 @@ from service import RenderAvatarService
 if __name__ == "__main__":
     print("[INFO] Starting worker...")
     valkey_client = valkey.Valkey(host="localhost", port=6379)
-    render_service = RenderAvatarService()
+    # render_service = RenderAvatarService()
+    render_service = RenderAvatarService(blender_mainfile = '../pretrained_models/smplx_tommy_male.blend', smplx_model_object='SMPLX-male')
     print("[INFO] Worker is running...")
     while True:
         task_id = valkey_client.brpop("render:jobs")[1].decode("utf-8")

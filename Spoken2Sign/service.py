@@ -287,7 +287,7 @@ class RenderAvatarService:
         self.images_dir = images_dir
         self.smplx_model_object = smplx_model_object
 
-    def generate_subtitles(self, task_id: int, gloss: str, gloss_frame_mapping: list[int]):
+    def generate_subtitles(self, task_id: str, gloss: str, gloss_frame_mapping: list[int]):
         video_id = f"custom-input-{task_id}"
         subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
         video_dir = os.path.dirname(subtitle_fname)
@@ -304,7 +304,7 @@ class RenderAvatarService:
                 subtitle_file.write(f"{gloss_item}\n\n")
         print(f"[INFO] subtitle for {video_id} generated at {subtitle_fname}")
     
-    def render_video(self, task_id: int):
+    def render_video(self, task_id: str):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
         motion_lst = os.listdir(motion_path)
@@ -330,7 +330,7 @@ class RenderAvatarService:
         bpy.data.scenes["Scene"].frame_end = current_frame
         bpy.ops.render.render(animation=True)
     
-    def render_images(self, task_id: int, progress_callback: Callable[[float], None]=None):
+    def render_images(self, task_id: str, progress_callback: Callable[[float], None]=None):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
         motion_lst = os.listdir(motion_path)

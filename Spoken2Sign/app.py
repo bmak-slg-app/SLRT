@@ -7,6 +7,7 @@ from service import Spoken2SignService
 import requests
 import valkey
 import json
+import hashlib
 
 from enum import Enum
 import time
@@ -30,7 +31,7 @@ class TaskStatus(str, Enum):
     error = 'error'
 
 
-def process_request(task_id: int, text: str):
+def process_request(task_id: str, text: str):
     valkey_client.set(f'task:{task_id}:status', TaskStatus.running_t2g)
     response = requests.post('http://localhost:8081/t2g', json={'text': text})
     if response.status_code != 200:
@@ -53,15 +54,14 @@ class Spoken2SignRequest(BaseModel):
     text: str
 
 class Spoken2SignTask(BaseModel):
-    id: int
+    id: str
     status: TaskStatus
     progress: float
 
 class Spoken2SignResult(BaseModel):
-    id: int
+    id: str
     text: str
     gloss: str
-    gloss_frame_mapping: list[list[int]]
     video_url: str
 
 @app.get("/healthz")
@@ -70,8 +70,11 @@ async def healthz() -> str:
 
 @app.post("/spoken2sign")
 def spoken2sign(request: Spoken2SignRequest, background_tasks: BackgroundTasks) -> Spoken2SignTask:
-    task_id = int(time.time())
+    task_id = hashlib.sha1(request.text.encode()).hexdigest()
     valkey_client.lpush("task:list", task_id)
+    status = valkey_client.get(f'task:{task_id}:status')
+    if status is not None:
+        return get_status(task_id)
     valkey_client.set(f'task:{task_id}:status', TaskStatus.in_queue)
     valkey_client.set(f'task:{task_id}:progress', 0.0)
     valkey_client.set(f'task:{task_id}:text', request.text)
@@ -79,7 +82,7 @@ def spoken2sign(request: Spoken2SignRequest, background_tasks: BackgroundTasks) 
     return Spoken2SignTask(id=task_id, status=TaskStatus.in_queue, progress=0.0)
 
 @app.get("/spoken2sign/{task_id}/status")
-def get_status(task_id: int) -> Spoken2SignTask:
+def get_status(task_id: str) -> Spoken2SignTask:
     status = valkey_client.get(f'task:{task_id}:status')
     progress = float(valkey_client.get(f'task:{task_id}:progress').decode())
     if not status:
@@ -89,15 +92,15 @@ def get_status(task_id: int) -> Spoken2SignTask:
 @app.get("/spoken2sign/status")
 def list_tasks() -> list[Spoken2SignTask]:
     task_list = valkey_client.lrange('task:list', 0, -1)
-    return [get_status(int(task.decode())) for task in task_list]
+    return [get_status(task.decode()) for task in task_list]
 
 @app.get("/spoken2sign/{task_id}/video")
-def get_video(task_id: int):
+def get_video(task_id: str):
     # replace with MinIO later
     return RedirectResponse(f"/static/custom-input-{task_id}.mp4")
 
 @app.get("/spoken2sign/{task_id}")
-def get_result(task_id: int) -> Spoken2SignResult:
+def get_result(task_id: str) -> Spoken2SignResult:
     text = valkey_client.get(f'task:{task_id}:text')
     gloss = valkey_client.get(f'task:{task_id}:gloss')
     gloss_frame_mapping = json.loads(valkey_client.get(f'task:{task_id}:gloss_frame_mapping'))
@@ -105,7 +108,6 @@ def get_result(task_id: int) -> Spoken2SignResult:
         id=task_id,
         text=text,
         gloss=gloss,
-        gloss_frame_mapping=gloss_frame_mapping,
         video_url=f"/static/custom-input-{task_id}.mp4",
     )
 
