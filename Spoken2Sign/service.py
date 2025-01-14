@@ -258,6 +258,7 @@ class RenderAvatarService:
             self,
             blender_addon_path: str = '../pretrained_models/smplx_blender_addon_300_20220623.zip',
             blender_mainfile: str = '../pretrained_models/smplx_tommy.blend',
+            smplx_model_object: str = 'SMPLX-female',
             motions_dir: str = './motions',
             images_dir: str = './images',
             videos_dir: str = './videos',
@@ -279,11 +280,12 @@ class RenderAvatarService:
         bpy.context.scene.render.image_settings.file_format = 'PNG'
         bpy.context.scene.render.image_settings.color_mode = 'RGBA'
 
-        bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+        bpy.context.view_layer.objects.active = bpy.data.objects[smplx_model_object]
 
         self.motions_dir = motions_dir
         self.videos_dir = videos_dir
         self.images_dir = images_dir
+        self.smplx_model_object = smplx_model_object
 
     def generate_subtitles(self, task_id: int, gloss: str, gloss_frame_mapping: list[int]):
         video_id = f"custom-input-{task_id}"
@@ -311,9 +313,9 @@ class RenderAvatarService:
         current_frame = 0
         for i in range(len(motion_lst)):
             fname = os.path.join(motion_path, motion_lst[i])
-            bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+            bpy.context.view_layer.objects.active = bpy.data.objects[self.smplx_model_object]
             bpy.ops.object.smplx_load_pose(filepath=fname)
-            bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+            bpy.context.view_layer.objects.active = bpy.data.objects[self.smplx_model_object]
             bpy.ops.object.posemode_toggle()
             bpy.ops.object.mode_set(mode='POSE')
             bpy.ops.pose.select_all(action='SELECT')
@@ -339,7 +341,7 @@ class RenderAvatarService:
 
         for i in range(len(motion_lst)):
             fname = os.path.join(motion_path, motion_lst[i])
-            bpy.context.view_layer.objects.active = bpy.data.objects["SMPLX-female"]
+            bpy.context.view_layer.objects.active = bpy.data.objects[self.smplx_model_object]
             bpy.ops.object.smplx_load_pose(filepath=fname)
             bpy.ops.render.render()
             bpy.data.images["Render Result"].save_render(os.path.join(img_dir, f"{i:03}.png"))
@@ -351,4 +353,4 @@ class RenderAvatarService:
         video_dir = os.path.dirname(vid_fname)
         if not os.path.exists(video_dir):
             os.makedirs(video_dir)
-        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname, vf=f"subtitles={subtitle_fname}").run()
+        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname, vf=f"subtitles={subtitle_fname}", pix_fmt="yuv420p").run()
