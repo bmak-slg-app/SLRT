@@ -362,4 +362,4 @@ class RenderAvatarService:
         video_dir = os.path.dirname(vid_fname)
         if not os.path.exists(video_dir):
             os.makedirs(video_dir)
-        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname, vf=f"subtitles={subtitle_fname}", pix_fmt="yuv420p").run()
+        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname, vf=f"subtitles={subtitle_fname}:force_style='FontSize=24'", pix_fmt="yuv420p").run()
