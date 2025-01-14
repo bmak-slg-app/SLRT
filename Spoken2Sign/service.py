@@ -287,7 +287,7 @@ class RenderAvatarService:
         self.images_dir = images_dir
         self.smplx_model_object = smplx_model_object
 
-    def generate_subtitles(self, task_id: str, gloss: str, gloss_frame_mapping: list[int]):
+    def generate_subtitles(self, task_id: str, gloss: str, gloss_frame_mapping: list[int], karaoke: bool = True):
         video_id = f"custom-input-{task_id}"
         subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
         video_dir = os.path.dirname(subtitle_fname)
@@ -298,10 +298,19 @@ class RenderAvatarService:
             for i, (gloss_item, frame_map) in enumerate(zip(gloss_lst, gloss_frame_mapping)):
                 subtitle_file.write(f"{i + 1}\n")
                 start_frame, end_frame = frame_map
+                if karaoke:
+                    if i + 1 < len(gloss_frame_mapping):
+                        # subtitle should be continuous in karaoke mode
+                        end_frame = gloss_frame_mapping[i + 1][0]
                 start_time = start_frame / frame_rate
                 end_time = end_frame / frame_rate
                 subtitle_file.write(f"{format_timestamp(start_time)} --> {format_timestamp(end_time)}\n")
-                subtitle_file.write(f"{gloss_item}\n\n")
+                if karaoke:
+                    subtitle_file.write(f"<font color=\"#00ffff\">{' '.join(gloss_lst[:i+1])}</font>")
+                    subtitle_file.write(f"{' ' if i + 1 < len(gloss_lst) else ''}{' '.join(gloss_lst[i+1:])}")
+                    subtitle_file.write("\n\n")
+                else:
+                    subtitle_file.write(f"{gloss_item}\n\n")
         print(f"[INFO] subtitle for {video_id} generated at {subtitle_fname}")
     
     def render_video(self, task_id: str):
