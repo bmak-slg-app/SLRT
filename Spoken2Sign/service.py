@@ -279,8 +279,6 @@ class RenderAvatarService:
         # bpy.data.objects["Camera"].location[0] = -0.02
         bpy.data.objects["Camera"].location[1] = -0.85 #-0.725
         bpy.data.objects["Camera"].location[2] = 0.155
-        bpy.context.scene.render.image_settings.file_format = 'PNG'
-        bpy.context.scene.render.image_settings.color_mode = 'RGBA'
 
         bpy.context.view_layer.objects.active = bpy.data.objects[smplx_model_object]
 
@@ -290,6 +288,9 @@ class RenderAvatarService:
         self.smplx_model_object = smplx_model_object
 
     def generate_subtitles(self, task_id: str, gloss: str, gloss_frame_mapping: list[int], karaoke: bool = True):
+        bpy.context.scene.render.image_settings.file_format = 'PNG'
+        bpy.context.scene.render.image_settings.color_mode = 'RGBA'
+
         video_id = f"custom-input-{task_id}"
         subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
         video_dir = os.path.dirname(subtitle_fname)
@@ -330,7 +331,10 @@ class RenderAvatarService:
             bpy.ops.object.posemode_toggle()
             bpy.ops.object.mode_set(mode='POSE')
             bpy.ops.pose.select_all(action='SELECT')
-            bpy.ops.anim.keyframe_insert()
+            for pose_bone in bpy.context.selected_pose_bones:
+                pose_bone.keyframe_insert(data_path='location')
+                pose_bone.keyframe_insert(data_path='rotation_quaternion')
+                pose_bone.keyframe_insert(data_path='scale')
             current_frame += 5
 
         vid_fname = os.path.join(self.videos_dir, f"{video_id}.mp4")

@@ -10,6 +10,7 @@ dependencies = [
     "ctcdecode",
     "fastapi[standard]>=0.115.6",
     "ffmpeg>=1.4",
+    "ffmpeg-python>=0.2.0",
     "human-body-prior",
     "lintel>=0.1.0",
     "loguru>=0.7.3",
