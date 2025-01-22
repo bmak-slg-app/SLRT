@@ -26,7 +26,9 @@ import pyrender
 import trimesh
 import numpy as np
 from cmd_parser import parse_config
-from human_body_prior.tools.model_loader import load_vposer
+# https://github.com/vchoutas/smplify-x/issues/144
+from human_body_prior.tools.model_loader import load_model
+from human_body_prior.models.vposer_model import VPoser
 import smplx
 import PIL.Image as pil_img
 import cv2
@@ -121,7 +123,8 @@ if __name__ == '__main__':
                                      dtype=dtype, device=device,
                                      requires_grad=True)
         vposer_ckpt = osp.expandvars(vposer_ckpt)
-        vposer, _ = load_vposer(vposer_ckpt, vp_model='snapshot')
+        # https://github.com/vchoutas/smplify-x/issues/144
+        vposer, _ = load_model(vposer_ckpt, model_code=VPoser, remove_words_in_model_weights='vp_model.', disable_grad=True)
         vposer = vposer.to(device=device)
         vposer.eval()
 
@@ -193,8 +196,8 @@ if __name__ == '__main__':
 
                     for key, val in data[0]['result'].items():
                         if key == 'body_pose' and use_vposer:
-                            body_pose = vposer.decode(
-                                pose_embedding, output_type='aa').view(1, -1)
+                            # https://github.com/vchoutas/smplify-x/issues/144
+                            body_pose = (vposer.decode(pose_embedding).get( 'pose_body')).reshape(1, -1)
                             if model_type == 'smpl':
                                 wrist_pose = torch.zeros([body_pose.shape[0], 6],
                                                         dtype=body_pose.dtype,
@@ -280,4 +283,3 @@ if __name__ == '__main__':
                 fname = os.path.join(save_dir, str(i).zfill(3)+'_inter.pkl')
             with open(fname, 'wb') as f:
                 pickle.dump(est_params_all[i], f)
-

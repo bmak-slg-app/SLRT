@@ -1,0 +1,34 @@
+[project]
+name = "spoken2sign"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "bpy>=4.0.0",
+    "configargparse>=1.7",
+    "ctcdecode",
+    "fastapi[standard]>=0.115.6",
+    "ffmpeg>=1.4",
+    "human-body-prior",
+    "lintel>=0.1.0",
+    "loguru>=0.7.3",
+    "mmcv-full<2",
+    "numpy<2",
+    "omegaconf>=2.3.0",
+    "opencc-python-reimplemented>=0.1.7",
+    "opencv-python>=4.11.0.86",
+    "pyrender>=0.1.45",
+    "smplx>=0.1.28",
+    "tensorboard>=2.18.0",
+    "torch<2",
+    "torchaudio>=0.13.1",
+    "torchvision>=0.14.1",
+    "tqdm>=4.67.1",
+    "transformers>=4.48.1",
+    "valkey>=6.0.2",
+]
+
+[tool.uv.sources]
+human-body-prior = { git = "https://github.com/nghorbani/human_body_prior" }
+ctcdecode = { git = "https://github.com/parlance/ctcdecode.git" }
