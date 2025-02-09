@@ -70,4 +70,5 @@ class T2GService:
                 clean_hyp = [g for g in hyp.split(' ') if g not in self.model.gloss_tokenizer.special_tokens]
                 clean_hyp = ' '.join(clean_hyp)
                 gls_hyp = self.cc.convert(clean_hyp).upper() if self.model.gloss_tokenizer.lower_case else hyp
+                gls_hyp = gls_hyp.lstrip("說 ") # temp hack to remove weird prefix output
                 return gls_hyp
