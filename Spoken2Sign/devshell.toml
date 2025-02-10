@@ -1,7 +1,0 @@
-[devshell]
-packages = ["python310"]
-
-[[commands]]
-name = "activate"
-command = "./venv/bin/activate"
-help = "Activate the virtual environment"

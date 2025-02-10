@@ -25,8 +25,7 @@ import torch.nn as nn
 import smplx
 
 import configargparse, yaml
-from human_body_prior.tools.model_loader import load_model
-from human_body_prior.models.vposer_model import VPoser
+from human_body_prior.tools.model_loader import load_vposer
 
 import pyrender
 import numpy as np
@@ -203,7 +202,7 @@ def smpl_to_openpose(model_type='smplx', use_hands=True, use_face=True,
             raise ValueError('Unknown model type: {}'.format(model_type))
     else:
         raise ValueError('Unknown joint format: {}'.format(openpose_format))
-
+    
 
 class GuassianBlur():
     def __init__(self, r, sigma=1):
@@ -278,7 +277,7 @@ def create_smplx_model(cfg_file=''):
                                      requires_grad=True)
 
         vposer_ckpt = osp.expandvars(vposer_ckpt)
-        vposer, _ = load_model(vposer_ckpt, model_code=VPoser, remove_words_in_model_weights='vp_model.', disable_grad=True)
+        vposer, _ = load_vposer(vposer_ckpt, vp_model='snapshot')
         vposer = vposer.to(device=device)
         vposer.eval()
     return {'model': model, 'vposer': vposer, 'pose_embedding': pose_embedding, 'args': args}
@@ -341,7 +340,8 @@ def kps_aug(model=None, vposer=None, pose_embedding=None, render_res=None, angle
 
         for key, val in data[0]['result'].items():
             if key == 'body_pose' and use_vposer:
-                body_pose = (vposer.decode(pose_embedding).get( 'pose_body')).reshape(1, -1)
+                body_pose = vposer.decode(
+                    pose_embedding, output_type='aa').view(1, -1)
                 if model_type == 'smpl':
                     wrist_pose = torch.zeros([body_pose.shape[0], 6],
                                             dtype=body_pose.dtype,
