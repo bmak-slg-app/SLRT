@@ -1,8 +1,14 @@
-with import <nixpkgs> { };
+{
+  pkgs ? import <nixpkgs> { },
+}:
+
+with pkgs;
+
 mkShell {
   packages = with pkgs; [
     blender
     ffmpeg
+    uv
     valkey
   ];
   NIX_LD_LIBRARY_PATH = lib.makeLibraryPath [
