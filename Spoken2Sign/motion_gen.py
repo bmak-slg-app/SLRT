@@ -108,7 +108,7 @@ if __name__ == '__main__':
     model = smplx.create(**model_params)
     model = model.to(device=device)
     sign_connector = MLP(input_dim=len(joint_idx)*3*2+len(joint_idx))
-    sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth', map_location='cuda:0'), strict=True)
+    sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth', map_location='cuda:0' if torch.cuda.is_available() else 'cpu'), strict=True)
     sign_connector.to(device)
     sign_connector.eval()
 
@@ -280,4 +280,3 @@ if __name__ == '__main__':
                 fname = os.path.join(save_dir, str(i).zfill(3)+'_inter.pkl')
             with open(fname, 'wb') as f:
                 pickle.dump(est_params_all[i], f)
-

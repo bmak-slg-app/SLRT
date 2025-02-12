@@ -60,7 +60,7 @@ class Spoken2SignService:
         model = model.to(device=device)
         self.model = model
         sign_connector = MLP(input_dim=len(joint_idx)*3*2+len(joint_idx))
-        sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth', map_location='cuda:0'), strict=True)
+        sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth', map_location='cuda:0' if torch.cuda.is_available() else 'cpu'), strict=True)
         sign_connector.to(device)
         sign_connector.eval()
         self.sign_connector = sign_connector
@@ -80,7 +80,7 @@ class Spoken2SignService:
             vposer.eval()
             self.vposer = vposer
         self.pose_embedding = pose_embedding
-        
+
         #-----------------------------------------------------Prepare Dict---------------------------------------------
         with open('../../data/tvb_all.pkl', 'rb') as f:
             render_results_all = pickle.load(f)
@@ -99,7 +99,7 @@ class Spoken2SignService:
                 # print(gloss, 'not in dict')  #maybe due to smplified-to-traditional conversion. rare cases.
                 continue
             clips.append(self.gloss2items[gloss][0][0])
-        
+
         est_params_all = []
         inter_flag = []
         gloss_frame_mapping = []
@@ -231,7 +231,7 @@ class Spoken2SignService:
                 fname = os.path.join(save_dir, str(i).zfill(3)+'_inter.pkl')
             with open(fname, 'wb') as f:
                 pickle.dump(est_params_all[i], f)
-        
+
         return GenerateResult(
             gloss=gloss,
             gloss_frame_mapping=gloss_frame_mapping,
@@ -313,7 +313,7 @@ class RenderAvatarService:
                 else:
                     subtitle_file.write(f"{gloss_item}\n\n")
         print(f"[INFO] subtitle for {video_id} generated at {subtitle_fname}")
-    
+
     def render_video(self, task_id: str):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
@@ -342,7 +342,7 @@ class RenderAvatarService:
         bpy.data.scenes['Scene'].render.filepath = vid_fname
         bpy.data.scenes["Scene"].frame_end = current_frame
         bpy.ops.render.render(animation=True)
-    
+
     def render_images(self, task_id: str, progress_callback: Callable[[float], None]=None):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
@@ -360,7 +360,7 @@ class RenderAvatarService:
             bpy.data.images["Render Result"].save_render(os.path.join(img_dir, f"{i:03}.png"))
             if progress_callback is not None:
                 progress_callback((i + 1) / len(motion_lst))
-        
+
         vid_fname = os.path.join(self.videos_dir, f"{video_id}.mp4")
         subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
         video_dir = os.path.dirname(vid_fname)

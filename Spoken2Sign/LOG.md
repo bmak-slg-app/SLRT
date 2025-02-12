@@ -37,7 +37,7 @@ I find the configuration filename is `T2G_csl.yaml` and `T2G_phoenix.yaml` inste
 python text2gloss/prediction.py --config=text2gloss/configs/T2G_phoenix.yaml
 ```
 
-I found a weird error the script is trying to get the model from HuggingHub. 
+I found a weird error the script is trying to get the model from HuggingHub.
 
 ```
 Traceback (most recent call last):
@@ -103,14 +103,13 @@ from transformers import MBartForConditionalGeneration, MBartTokenizer, MBartCon
             self.logger.info('Initialize translation network from {}'.format(cfg['pretrained_model_name_or_path']))
             self.model = MBartForConditionalGeneration.from_pretrained(
                 cfg['pretrained_model_name_or_path'],
-                **overwrite_cfg 
+                **overwrite_cfg
             )
 ```
 
 After some source code digging and guessing, I suspect the size of the embedding is incorrect. From the source code, we can see the line `overwrite_cfg['vocab_size'] = len(self.gloss_tokenizer)` sets the vocab size.
 
 The next task will be investigating where the `vocab_size` comes from and how to correct the size.
-
 
 ## Oct 19
 
@@ -129,12 +128,12 @@ print(len(self.gloss_tokenizer))
 ```
 
 In `GlossTokenizer` section of the config, there is no relevant vocab size information.
-```yaml
-    GlossTokenizer:
-      gloss2id_file: ../../pretrained_models/mBart_de_t2g/gloss2ids.pkl
-      src_lang: de_DGS
-```
 
+```yaml
+GlossTokenizer:
+  gloss2id_file: ../../pretrained_models/mBart_de_t2g/gloss2ids.pkl
+  src_lang: de_DGS
+```
 
 Trace, from `Spoken2Sign/text2gloss/modelling/Tokenizer.py`
 
@@ -149,14 +148,14 @@ class BaseGlossTokenizer(BaseTokenizer):
         with open(tokenizer_cfg['gloss2id_file'],'rb') as f:
             self.gloss2id = pickle.load(f) #
         self.gloss2id = defaultdict(lambda: self.gloss2id['<unk>'], self.gloss2id)
-        #check 
+        #check
         ids = [id_ for gls, id_ in self.gloss2id.items()]
         assert len(ids)==len(set(ids))
         self.id2gloss = {}
         for gls, id_ in self.gloss2id.items():
-            self.id2gloss[id_] = gls        
+            self.id2gloss[id_] = gls
         self.lower_case = tokenizer_cfg.get('lower_case',True)
-        
+
     def convert_tokens_to_ids(self, tokens):
         if type(tokens)==list:
             return [self.convert_tokens_to_ids(t) for t in tokens]
@@ -168,7 +167,7 @@ class BaseGlossTokenizer(BaseTokenizer):
             return [self.convert_ids_to_tokens(i) for i in ids]
         else:
             return self.id2gloss[ids]
-    
+
     def __len__(self):
         return len(self.id2gloss)
 ```
@@ -176,9 +175,9 @@ class BaseGlossTokenizer(BaseTokenizer):
 Length is from `self.gloss2id` which points to `gloss2id_file` of config.
 
 ```yaml
-    GlossTokenizer:
-      gloss2id_file: ../../pretrained_models/mBart_de_t2g/gloss2ids.pkl
-      src_lang: de_DGS
+GlossTokenizer:
+  gloss2id_file: ../../pretrained_models/mBart_de_t2g/gloss2ids.pkl
+  src_lang: de_DGS
 ```
 
 Length is indeed 1120.
@@ -238,14 +237,14 @@ FileNotFoundError: [Errno 2] No such file or directory: '../../data/tvb/v5.7_dev
 
 I suspect `v5.7_dev_sim.pkl` is same as `tvb_dev.pkl`. I updated `T2G_tvb.yaml`.
 
-
 Before:
+
 ```yaml
 task: T2G
-data:  
+data:
   input_data: videos
   input_streams:
-  - rgb
+    - rgb
   zip_file: ../../data/tvb/tvb
   dev: ../../data/tvb/v5.7_dev_sim.pkl
   test: ../../data/tvb/v5.7_dev_sim.pkl
@@ -253,12 +252,13 @@ data:
 ```
 
 After:
+
 ```yaml
 task: T2G
-data:  
+data:
   input_data: videos
   input_streams:
-  - rgb
+    - rgb
   zip_file: ../../data/tvb/tvb
   dev: ../../data/tvb_dev.pkl
   test: ../../data/tvb_dev.pkl
@@ -287,9 +287,7 @@ in the data preparation. The download script seems relevant.
 
 https://github.com/FangyunWei/SLRT/blob/main/TwoStreamNetwork/download.sh
 
-
 Unfortunately, I failed to unzip the file.
-
 
 ## Oct 29
 
@@ -313,7 +311,6 @@ It is trying to open a gzipped pickle/ raw pickle file.
 `dataset_cfg[self.split]` just means that three `dev`, `test`, `train` keys in config. Therefrore, it can be inferred
 the three keys are for annotation data.
 
-
 I get back to `prediction.py`.
 
 Looking at the main function. Line 272:
@@ -324,13 +321,12 @@ do_translation, do_recognition = cfg['task'] not in ['S2G','T2G'], cfg['task'] n
 
 False for both params.
 
-
 ```py
     for datasetname in cfg['datanames']:
         logger.info('Evaluate '+datasetname)
         load_model_path = os.path.join(model_dir,'ckpts',datasetname+'_'+args.ckpt_name)
         if os.path.isfile(load_model_path):
-            state_dict = torch.load(load_model_path, map_location='cuda')
+            state_dict = torch.load(load_model_path, map_location='cuda' if torch.cuda.is_available() else 'cpu')
             neq_load_customized(model, state_dict['model_state'], verbose=True)
             epoch, global_step = state_dict.get('epoch',0), state_dict.get('global_step',0)
             logger.info('Load model ckpt from '+load_model_path)
@@ -343,8 +339,8 @@ False for both params.
         for split in ['dev', 'test']:
             logger.info('Evaluate on {} set'.format(split))
             dataloader, sampler = build_dataloader(cfg_, split, model.text_tokenizer, model.gloss_tokenizer, mode='test')
-            evaluation(model=model, val_dataloader=dataloader, cfg=cfg_, 
-                    epoch=epoch, global_step=global_step, 
+            evaluation(model=model, val_dataloader=dataloader, cfg=cfg_,
+                    epoch=epoch, global_step=global_step,
                     generate_cfg=cfg_['testing']['cfg'],
                     save_dir=os.path.join(model_dir,args.save_subdir,split),
                     do_translation=do_translation, do_recognition=do_recognition, external_logits=args.external_logits, save_logits=True)
@@ -411,7 +407,7 @@ self.gloss_tokenizer = GlossTokenizer_G2G(tokenizer_cfg=cfg['GlossTokenizer'])
 self.text_embedding = torch.load(cfg['TextTokenizer']['text2embed_file'])
 self.model = MBartForConditionalGeneration.from_pretrained(
     cfg['pretrained_model_name_or_path'],
-    **overwrite_cfg 
+    **overwrite_cfg
 )
 ```
 
@@ -493,8 +489,8 @@ class TextTokenizer(BaseTokenizer):
             pruned_input_ids = self.prune(raw_outputs['input_ids'])
             outputs['input_ids'] = pruned_input_ids
             outputs['attention_mask'] = torch.tensor(raw_outputs['attention_mask']).long()
-        return outputs 
-    
+        return outputs
+
 ```
 
 https://huggingface.co/docs/transformers/en/model_doc/mbart#transformers.MBartTokenizer
@@ -535,7 +531,7 @@ However, this left me CUDA errors as following:
 ```
 Traceback (most recent call last):
   File "/workspace/text2gloss/prediction.py", line 293, in <module>
-    evaluation(model=model, val_dataloader=dataloader, cfg=cfg_, 
+    evaluation(model=model, val_dataloader=dataloader, cfg=cfg_,
   File "/workspace/text2gloss/prediction.py", line 97, in evaluation
     forward_output = model(is_train=False, **batch)
   File "/usr/local/conda/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1051, in _call_impl
@@ -566,9 +562,9 @@ Solving environment: failed with initial frozen solve. Retrying with flexible so
       File "/usr/local/conda/lib/python3.9/site-packages/conda/common/logic.py", line 125, in _convert
         return self.names[name]
     KeyError: 'conda-forge/linux-64::lintel-1.0-py38h0717a4f_1003'
-    
+
     During handling of the above exception, another exception occurred:
-    
+
     Traceback (most recent call last):
       File "/usr/local/conda/lib/python3.9/site-packages/conda/exceptions.py", line 1129, in __call__
         return func(*args, **kwargs)
@@ -687,20 +683,20 @@ conda install mmcv-full==1.7.0
 I suspect PyTorch 2.x does not work.
 
 ```
-Traceback (most recent call last):                                                                                                                                                                                                    
-  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/prediction.py", line 6, in <module>                                                                                                                                        
-    from modelling.model import build_model                                                                                                                                                                                           
-  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/modelling/model.py", line 2, in <module>                                                                                                                                   
-    from modelling.recognition import RecognitionNetwork                                                                                                                                                                              
-  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/modelling/recognition.py", line 5, in <module>                                                                                                                             
-    from modelling.ResNet2d import ResNet2d_backbone                                                                                                                                                                                  
-  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/modelling/ResNet2d.py", line 2, in <module>                                                                                                                                
-    import torch, torchvision                                                                                                                                                                                                         
-  File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torchvision/__init__.py", line 6, in <module>                                                                                                                   
-    from torchvision import _meta_registrations, datasets, io, models, ops, transforms, utils                                                                                                                                         
-  File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torchvision/_meta_registrations.py", line 4, in <module>                                                                                                        
-    import torch._custom_ops                                                                                                                                                                                                          
-  File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torch/_custom_ops.py", line 3, in <module>                                                                                                                      
+Traceback (most recent call last):
+  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/prediction.py", line 6, in <module>
+    from modelling.model import build_model
+  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/modelling/model.py", line 2, in <module>
+    from modelling.recognition import RecognitionNetwork
+  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/modelling/recognition.py", line 5, in <module>
+    from modelling.ResNet2d import ResNet2d_backbone
+  File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/modelling/ResNet2d.py", line 2, in <module>
+    import torch, torchvision
+  File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torchvision/__init__.py", line 6, in <module>
+    from torchvision import _meta_registrations, datasets, io, models, ops, transforms, utils
+  File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torchvision/_meta_registrations.py", line 4, in <module>
+    import torch._custom_ops
+  File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torch/_custom_ops.py", line 3, in <module>
     from torch._custom_op.impl import (
   File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torch/_custom_op/impl.py", line 13, in <module>
     from torch._library.abstract_impl import AbstractImplCtx
@@ -752,7 +748,7 @@ Collecting ctcdecode
 Building wheels for collected packages: ctcdecode
   Building wheel for ctcdecode (setup.py) ... error
   error: subprocess-exited-with-error
-  
+
   × python setup.py bdist_wheel did not run successfully.
   │ exit code: 1
   ╰─> [165 lines of output]
@@ -862,9 +858,9 @@ Building wheels for collected packages: ctcdecode
         File "/home/system/miniconda3/envs/SLG/lib/python3.10/subprocess.py", line 526, in run
           raise CalledProcessError(retcode, process.args,
       subprocess.CalledProcessError: Command '['ninja', '-v']' returned non-zero exit status 1.
-      
+
       The above exception was the direct cause of the following exception:
-      
+
       Traceback (most recent call last):
         File "<string>", line 2, in <module>
         File "<pip-setuptools-caller>", line 34, in <module>
@@ -922,7 +918,7 @@ Building wheels for collected packages: ctcdecode
           raise RuntimeError(message) from e
       RuntimeError: Error compiling objects for extension
       [end of output]
-  
+
   note: This error originates from a subprocess, and is likely not a problem with pip.
   ERROR: Failed building wheel for ctcdecode
   Running setup.py clean for ctcdecode
@@ -953,7 +949,7 @@ Traceback (most recent call last):
     requires_backends(cls, cls._backends)
   File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/transformers/utils/import_utils.py", line 1531, in requires_backends
     raise ImportError("".join(failed))
-ImportError: 
+ImportError:
 MBartTokenizer requires the SentencePiece library but it was not found in your environment. Checkout the instructions on the
 installation page of its repo: https://github.com/google/sentencepiece#installation and follow the ones
 that match your environment. Please note that you may need to restart your runtime after installation.
@@ -962,7 +958,7 @@ that match your environment. Please note that you may need to restart your runti
 ```
 Traceback (most recent call last):
   File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/prediction.py", line 293, in <module>
-    evaluation(model=model, val_dataloader=dataloader, cfg=cfg_, 
+    evaluation(model=model, val_dataloader=dataloader, cfg=cfg_,
   File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/prediction.py", line 97, in evaluation
     forward_output = model(is_train=False, **batch)
   File "/home/system/miniconda3/envs/SLG/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
@@ -986,7 +982,6 @@ translation.py: L204
             kwargs['inputs_embeds'] = self.text_embedding.to(input_ids.device)[input_ids].to(input_ids.device) * self.input_embed_scale
 ```
 
-
 ```
 [Validation] 322/322 [==============================] 444.5ms/step
 2024-12-11 10:20:16,554 #samples: 322, average time cost per video: 0.02420728177017307s
@@ -994,7 +989,7 @@ translation.py: L204
 2024-12-11 10:20:16,555 total_loss Average:119.69
 Traceback (most recent call last):
   File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/prediction.py", line 293, in <module>
-    evaluation(model=model, val_dataloader=dataloader, cfg=cfg_, 
+    evaluation(model=model, val_dataloader=dataloader, cfg=cfg_,
   File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/prediction.py", line 186, in evaluation
     wer_results = wer_list(hypotheses=gls_hyp, references=gls_ref)
   File "/home/system/workspace/SLRT/Spoken2Sign/text2gloss/utils/metrics.py", line 113, in wer_list

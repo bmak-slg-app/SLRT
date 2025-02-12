@@ -29,7 +29,7 @@ from utils.misc import (
     set_seed,
     symlink_update,
     is_main_process, init_DDP, move_to_device,
-    synchronize 
+    synchronize
 )
 from dataset.Dataloader import build_dataloader
 from utils.progressbar import ProgressBar
@@ -65,18 +65,18 @@ def extract_visual_feature(model, dataloader, cfg):  #to-do output_dir
                     entry[key] = batch[key][ii]
                 for suffix, output_data in suffix2data.items():
                     if suffix in forward_output:
-                        output_data.append({**entry, 
+                        output_data.append({**entry,
                             'sign':forward_output[suffix][ii].detach().cpu()})
                     if suffix == 'inputs_embeds':
                         #consider mask
                         valid_len = torch.sum(forward_output['transformer_inputs']['attention_mask'][ii])
-                        output_data.append({**entry, 
+                        output_data.append({**entry,
                             'sign':forward_output['transformer_inputs'][suffix][ii,:valid_len].detach().cpu()})
             pbar(step)
     return suffix2data
 
 
-    
+
 
 
 if __name__ == "__main__":
@@ -136,19 +136,19 @@ if __name__ == "__main__":
     if not args.ckpt_path=='':
         if os.path.isfile(args.ckpt_path):
             load_model_path = os.path.join(args.ckpt_path)
-            state_dict = torch.load(load_model_path, map_location='cuda')
+            state_dict = torch.load(load_model_path, map_location='cuda' if torch.cuda.is_available() else 'cpu')
             model.load_state_dict(state_dict['model_state'])
             logger.info('Load model ckpt from '+load_model_path)
         else:
             logger.info(f'{args.ckpt_path} does not exist, model from scratch')
 
-    model = DDP(model, 
-        device_ids=[cfg['local_rank']], 
+    model = DDP(model,
+        device_ids=[cfg['local_rank']],
         output_device=cfg['local_rank'])
     for split in args.output_split.split(','):
         logger.info('Extract visual feature on {} set'.format(split))
         dataloader, sampler = build_dataloader(cfg, split, model.module.text_tokenizer, model.module.gloss_tokenizer,
-                mode='eval', val_distributed=True)            
+                mode='eval', val_distributed=True)
         results = extract_visual_feature(model.module, dataloader, cfg)
         for name, output_data in results.items():
             subdir = os.path.join(args.outputdir, name)
@@ -174,4 +174,4 @@ if __name__ == "__main__":
                 with gzip.open(gather_file,'wb') as f:
                     pickle.dump([v for k, v in name2data.items()], f)
                 logger.info(f'Gather {split} -> {len(name2data)}')
-                logger.info(f'save as {gather_file}')            
+                logger.info(f'save as {gather_file}')

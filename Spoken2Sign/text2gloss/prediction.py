@@ -62,7 +62,7 @@ def phoenix_gls_mapping(pred, fname):
     return op
 
 
-def evaluation(model, val_dataloader, cfg, 
+def evaluation(model, val_dataloader, cfg,
         tb_writer=None, wandb_run=None,
         epoch=None, global_step=None,
         generate_cfg={}, save_dir=None,
@@ -113,8 +113,8 @@ def evaluation(model, val_dataloader, cfg,
                         else:
                             input_lengths = forward_output['input_lengths']
                         ctc_decode_output = model.predict_gloss_from_logits(
-                            gloss_logits=gls_logits, 
-                            beam_size=generate_cfg['recognition']['beam_size'], 
+                            gloss_logits=gls_logits,
+                            beam_size=generate_cfg['recognition']['beam_size'],
                             input_lengths=input_lengths,
                             datasetname=datasetname,
                             lm=cfg.get('lm', None),
@@ -122,7 +122,7 @@ def evaluation(model, val_dataloader, cfg,
                         )
                         if save_logits and logits_name in ['ensemble_last_']:
                             logits_dict[batch['name'][0]] = gls_logits.detach().cpu()
-                        batch_pred_gls = model.gloss_tokenizer.convert_ids_to_tokens(ctc_decode_output, datasetname)       
+                        batch_pred_gls = model.gloss_tokenizer.convert_ids_to_tokens(ctc_decode_output, datasetname)
                         # print(batch_pred_gls, batch['gloss'])
                         for name, gls_hyp, gls_ref in zip(batch['name'], batch_pred_gls, batch['gloss']):
                             dataset2results[datasetname][name][f'{logits_name}gls_hyp'] = \
@@ -145,7 +145,7 @@ def evaluation(model, val_dataloader, cfg,
                         clean_hyp = ' '.join(clean_hyp)
                         dataset2results[datasetname][name]['gls_hyp'] = cc.convert(clean_hyp).upper() if model.gloss_tokenizer.lower_case else hyp
                         dataset2results[datasetname][name]['gls_ref'] = cc.convert(gls_ref).upper() if model.gloss_tokenizer.lower_case else gls_ref
-                        
+
                     else:
                         dataset2results[datasetname][name]['txt_hyp'], dataset2results[datasetname][name]['txt_ref'] = hyp, txt_ref
                         # print('hyp: ', hyp, 'ref: ', txt_ref)
@@ -175,10 +175,10 @@ def evaluation(model, val_dataloader, cfg,
                 k = hyp_name.replace('gls_hyp','')
                 if datasetname in ['phoenix', 'phoenix2014tsi', 'phoenix_syn', 'phoenix_syn_gt', 'phoenix_syn_smplx', 'phoenix_syn_smplx_gt']:
                     gls_ref = [clean_phoenix_2014_trans(results[n]['gls_ref']) for n in results]
-                    gls_hyp = [clean_phoenix_2014_trans(results[n][hyp_name]) for n in results] 
+                    gls_hyp = [clean_phoenix_2014_trans(results[n][hyp_name]) for n in results]
                 elif datasetname in ['phoenix2014', 'phoenix2014si', 'phoenixcomb']:
                     gls_ref = [clean_phoenix_2014(results[n]['gls_ref']) for n in results]
-                    gls_hyp = [clean_phoenix_2014(results[n][hyp_name]) for n in results] 
+                    gls_hyp = [clean_phoenix_2014(results[n][hyp_name]) for n in results]
                 elif datasetname in ['csl','cslr','csl_syn_gt','wlasl2000','tvb']:
                     gls_ref = [results[n]['gls_ref'] for n in results]
                     gls_hyp = [results[n][hyp_name] for n in results]
@@ -196,11 +196,11 @@ def evaluation(model, val_dataloader, cfg,
                     logger.info('{}-ROUGE: {:.2f}'.format(datasetname, rouge_score))
                     evaluation_results['rouge'], evaluation_results['bleu'] = rouge_score, bleu_dict
                 if tb_writer:
-                    tb_writer.add_scalar(f'eval_{datasetname}/{k}WER', wer_results['wer'], epoch if epoch!=None else global_step)   
+                    tb_writer.add_scalar(f'eval_{datasetname}/{k}WER', wer_results['wer'], epoch if epoch!=None else global_step)
                 if wandb_run!=None:
-                    wandb.log({f'eval_{datasetname}/{k}WER': wer_results['wer']})  
+                    wandb.log({f'eval_{datasetname}/{k}WER': wer_results['wer']})
                 evaluation_results['wer'] = min(wer_results['wer'], evaluation_results['wer'])
-            
+
             if datasetname == 'tvb' and not do_translation:
                 gls_ref = [clean_tvb(results[n]['gls_ref']) for n in results]
                 gls_hyp = [clean_tvb(results[n]['gls_hyp']) for n in results]
@@ -236,7 +236,7 @@ def evaluation(model, val_dataloader, cfg,
                     pickle.dump(logits_dict, f)
         dataset2evaluation_results[datasetname] = evaluation_results
     return dataset2evaluation_results
-    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("SLT baseline Testing")
@@ -277,7 +277,7 @@ if __name__ == "__main__":
         logger.info('Evaluate '+datasetname)
         load_model_path = os.path.join(model_dir,'ckpts',datasetname+'_'+args.ckpt_name)
         if os.path.isfile(load_model_path):
-            state_dict = torch.load(load_model_path, map_location='cuda')
+            state_dict = torch.load(load_model_path, map_location='cuda' if torch.cuda.is_available() else 'cpu')
             neq_load_customized(model, state_dict['model_state'], verbose=True)
             epoch, global_step = state_dict.get('epoch',0), state_dict.get('global_step',0)
             logger.info('Load model ckpt from '+load_model_path)
@@ -290,9 +290,8 @@ if __name__ == "__main__":
         for split in ['dev', 'test']:
             logger.info('Evaluate on {} set'.format(split))
             dataloader, sampler = build_dataloader(cfg_, split, model.text_tokenizer, model.gloss_tokenizer, mode='test')
-            evaluation(model=model, val_dataloader=dataloader, cfg=cfg_, 
-                    epoch=epoch, global_step=global_step, 
+            evaluation(model=model, val_dataloader=dataloader, cfg=cfg_,
+                    epoch=epoch, global_step=global_step,
                     generate_cfg=cfg_['testing']['cfg'],
                     save_dir=os.path.join(model_dir,args.save_subdir,split),
                     do_translation=do_translation, do_recognition=do_recognition, external_logits=args.external_logits, save_logits=True)
-
