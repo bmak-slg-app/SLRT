@@ -1,7 +1,9 @@
 with import <nixpkgs> { };
 mkShell {
   packages = with pkgs; [
+    blender
     ffmpeg
+    valkey
   ];
   NIX_LD_LIBRARY_PATH = lib.makeLibraryPath [
     stdenv.cc.cc.lib
