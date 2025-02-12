@@ -22,8 +22,8 @@ class T2GService:
         print(f"[INFO] T2G model dir: {model_dir}")
         os.makedirs(model_dir, exist_ok=True)
         self.logger = make_logger(model_dir=model_dir)
-        
-        cfg['device'] = torch.device('cuda')
+
+        cfg['device'] = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.cfg = cfg
 
         model = build_model(cfg)
@@ -33,7 +33,7 @@ class T2GService:
             print('[INFO] Evaluate '+datasetname)
             load_model_path = os.path.join(model_dir,'ckpts',datasetname+'_'+ckpt_name)
             if os.path.isfile(load_model_path):
-                state_dict = torch.load(load_model_path, map_location='cuda')
+                state_dict = torch.load(load_model_path, map_location='cuda' if torch.cuda.is_available() else 'cpu')
                 neq_load_customized(model, state_dict['model_state'], verbose=True)
                 print('[INFO] Load model ckpt from '+load_model_path)
             else:
@@ -61,7 +61,7 @@ class T2GService:
         collated = collate_fn_(custom_dataset, data_cfg=self.cfg["data"]["tvb"], task=self.cfg["task"], is_train=False, dataset=self.dataset,
             text_tokenizer=self.model.text_tokenizer, gloss_tokenizer=self.model.gloss_tokenizer)
         with torch.no_grad():
-            batch_0 = move_to_device(collated, self.cfg['device'])
+            batch_0 = move_to_device(collated, self.cfg['device'] if torch.cuda.is_available() else 'cpu')
             forward_output = self.model(is_train=False, **batch_0)
             generate_output = self.model.generate_txt(
                             transformer_inputs=forward_output['transformer_inputs'],

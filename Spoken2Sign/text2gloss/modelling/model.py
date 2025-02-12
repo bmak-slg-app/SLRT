@@ -71,8 +71,8 @@ class SignLanguageModel(torch.nn.Module):
 
             input_type = model_cfg['TranslationNetwork'].pop('input_type','feature')
             self.translation_network = TranslationNetwork(
-                input_type=input_type, 
-                cfg=model_cfg['TranslationNetwork'], 
+                input_type=input_type,
+                cfg=model_cfg['TranslationNetwork'],
                 task=self.task)
             self.text_tokenizer = self.translation_network.text_tokenizer
             self.gloss_tokenizer = self.recognition_network.gloss_tokenizer #!!recognition_network.gloss_tokenizer!!
@@ -91,7 +91,7 @@ class SignLanguageModel(torch.nn.Module):
                 in_features = in_features,
                 out_features = self.translation_network.input_dim,
                 gloss_id2str=self.gloss_tokenizer.id2gloss,
-                gls2embed=getattr(self.translation_network, 'gls2embed', None), 
+                gls2embed=getattr(self.translation_network, 'gls2embed', None),
             )
 
             only_fine_tune_lm_head = model_cfg['TranslationNetwork'].get('only_fine_tune_lm_head', False)
@@ -106,7 +106,7 @@ class SignLanguageModel(torch.nn.Module):
         if self.task=='S2T_glsfree':
             self.input_data = cfg['data']['input_data']
             self.translation_network = TranslationNetwork(
-                input_type='feature', 
+                input_type='feature',
                 cfg=model_cfg['TranslationNetwork'], task=self.task)
             if self.input_data=='feature':
                 in_features = cfg['data'].get('in_feature', 832)
@@ -120,7 +120,7 @@ class SignLanguageModel(torch.nn.Module):
                 #output {'sgn_feature':sgn, 'sgn_mask':sgn_mask, 'valid_len_out': valid_len_out}
                 in_features = self.feature_extractor.out_features
                 self.sgn_embed = SpatialEmbeddings(
-                    embedding_dim=self.translation_network.input_dim, 
+                    embedding_dim=self.translation_network.input_dim,
                     input_size=in_features, norm_type='sync_batch', activation_type='relu')
             else:
                 raise ValueError
@@ -138,25 +138,25 @@ class SignLanguageModel(torch.nn.Module):
     def forward(self, is_train, translation_inputs={}, recognition_inputs={}, **kwargs):
         if self.task=='S2G':
             model_outputs = self.recognition_network(is_train=is_train, **recognition_inputs)
-            model_outputs['total_loss'] = model_outputs['recognition_loss']            
+            model_outputs['total_loss'] = model_outputs['recognition_loss']
         elif self.task in ['G2T', 'T2G']:
             model_outputs = self.translation_network(**translation_inputs)
             model_outputs['total_loss'] = model_outputs['translation_loss']
         elif self.task=='S2T':
             recognition_outputs = self.recognition_network(is_train=is_train, **recognition_inputs)
-            #'input_lengths': 
+            #'input_lengths':
             # 'recognition_loss'
             # 'gloss_feature'
             mapped_feature = self.vl_mapper(visual_outputs=recognition_outputs)
             translation_inputs = {
                 **translation_inputs,
-                'input_feature':mapped_feature, 
-                'input_lengths':recognition_outputs['input_lengths']} 
+                'input_feature':mapped_feature,
+                'input_lengths':recognition_outputs['input_lengths']}
 
             if self.translation_network.input_type == 'pred_gloss+feature':
                 gloss_logits = recognition_outputs['ensemble_last_gloss_logits']
                 with torch.no_grad():
-                    ctc_decode_output = self.predict_gloss_from_logits(gloss_logits=gloss_logits, 
+                    ctc_decode_output = self.predict_gloss_from_logits(gloss_logits=gloss_logits,
                         beam_size=1, input_lengths=recognition_outputs['input_lengths'],
                         datasetname=kwargs['datasetname'])
                     max_length = max([len(o) for o in ctc_decode_output])
@@ -167,14 +167,14 @@ class SignLanguageModel(torch.nn.Module):
                     gloss_ids = torch.tensor(gloss_ids, dtype=torch.long, device=gloss_logits.device)
                     gloss_lengths =  torch.tensor(gloss_lengths, dtype=torch.long, device=gloss_logits.device)
                 translation_inputs['gloss_ids'] = gloss_ids
-                translation_inputs['gloss_lengths'] = gloss_lengths  
+                translation_inputs['gloss_lengths'] = gloss_lengths
             translation_outputs = self.translation_network(**translation_inputs)
             model_outputs = {**translation_outputs, **recognition_outputs}
             model_outputs['transformer_inputs'] = model_outputs['transformer_inputs'] #for latter use of decoding
             model_outputs['total_loss'] = \
                 model_outputs['recognition_loss']*self.recognition_weight + \
-                model_outputs['translation_loss']*self.translation_weight 
-        
+                model_outputs['translation_loss']*self.translation_weight
+
         elif self.task=='S2T_glsfree':
             model_outputs = {}
             if self.input_data=='feature':
@@ -187,7 +187,7 @@ class SignLanguageModel(torch.nn.Module):
                 model_outputs = self.feature_extractor(**recognition_inputs)
                 input_feature = model_outputs['sgn_feature']
                 input_lengths = model_outputs['valid_len_out']
-                mapped_feature = self.sgn_embed(x=input_feature, lengths=input_lengths)         
+                mapped_feature = self.sgn_embed(x=input_feature, lengths=input_lengths)
             translation_inputs = {
                 **translation_inputs,
                 'input_feature': mapped_feature, #
@@ -196,21 +196,21 @@ class SignLanguageModel(torch.nn.Module):
             model_outputs = {**model_outputs,**translation_outputs}
             model_outputs['transformer_inputs'] = model_outputs['transformer_inputs']
             model_outputs['total_loss'] = model_outputs['translation_loss']
-        
+
         elif self.task=='S2T_Ensemble':
             assert 'inputs_embeds_list' in translation_inputs and 'attention_mask_list' in translation_inputs
             assert len(translation_inputs['inputs_embeds_list'])==len(self.translation_network.model.model_list)
             model_outputs = self.translation_network(**translation_inputs)
         return model_outputs
 
-    
-    def generate_txt(self, transformer_inputs=None, generate_cfg={}, **kwargs):          
+
+    def generate_txt(self, transformer_inputs=None, generate_cfg={}, **kwargs):
         #transformer_inputs the same with forward
         #some keys are not used (labels, decoder_input_ids) this will be automatically ignored in generate
         #'inputs_embeds' 'attention_mask'!
-        model_outputs = self.translation_network.generate(**transformer_inputs, **generate_cfg)  
+        model_outputs = self.translation_network.generate(**transformer_inputs, **generate_cfg)
         return model_outputs
-    
+
     def predict_gloss_from_logits(self, gloss_logits, beam_size, input_lengths, datasetname, lm=None, alpha=0):
         return self.recognition_network.decode(
             gloss_logits=gloss_logits,
@@ -232,4 +232,4 @@ class SignLanguageModel(torch.nn.Module):
 
 def build_model(cfg):
     model = SignLanguageModel(cfg)
-    return model.to(cfg['device'])
+    return model.to(cfg['device'] if torch.cuda.is_available() else 'cpu')

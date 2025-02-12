@@ -20,6 +20,7 @@ dependencies = [
     "opencc-python-reimplemented>=0.1.7",
     "opencv-python>=4.11.0.86",
     "pyrender>=0.1.45",
+    "sentencepiece>=0.2.0",
     "smplx>=0.1.28",
     "tensorboard>=2.18.0",
     "torch<2",
