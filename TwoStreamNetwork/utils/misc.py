@@ -111,7 +111,7 @@ def make_logger(model_dir: str, log_file: str = "train.log") -> Logger:
                 sh.setLevel(logging.ERROR)
             sh.setFormatter(formatter)
             logging.getLogger("").addHandler(sh)
-        return logger
+    return logger
 
 def make_writer(model_dir):
     if is_main_process():

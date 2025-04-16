@@ -56,7 +56,10 @@ def read_img(path, dataset_name, csl_cut, csl_resize=-1):
             rgb_im = rgb_im.resize((csl_resize[0], csl_resize[1]))
     return rgb_im
 
-
+def read_raw_img(path):
+    with open(path, "rb") as f:
+        rgb_im = Image.open(f).convert('RGB')
+        return rgb_im
 
 def pil_list_to_tensor(pil_list, int2float=True):
     func = torchvision.transforms.PILToTensor()
@@ -127,6 +130,12 @@ def load_video(zip_file, name, num_frames, transform_cfg, dataset_name, is_train
         tmin, tmax = transform_cfg['temporal_augmentation']['tmin'], transform_cfg['temporal_augmentation']['tmax']
     else:
         tmin, tmax = 1, 1
+    if name.startswith('custom-data@'):
+        frames_dir = name.split('@')[1]
+        image_path_list = [os.path.join(frames_dir, frame_name) for frame_name in sorted(os.listdir(frames_dir)) if frame_name.endswith(".png")]
+        selected_indexs, valid_len = get_selected_indexs(len(image_path_list), tmin=tmin, tmax=tmax)
+        sequence = [read_raw_img(image_path) for image_path in image_path_list]
+        return sequence, valid_len, selected_indexs
     if dataset_name.lower() in ['csl-daily', 'phoenix-2014t', 'phoenix-2014']: 
         if dataset_name.lower()=='csl-daily':
             image_path_list = ['{}@sentence_frames-512x512/{}/{:06d}.jpg'.format(zip_file, name, fi)
