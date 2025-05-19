@@ -1,6 +1,8 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List
+from typing_extensions import Annotated
 import ffmpeg
 import hashlib
 import tempfile
@@ -26,13 +28,33 @@ valkey_client = redis.Redis(host='localhost', port=6379, db=0)
 class Sign2TextResult(BaseModel):
     id: str
     task_type: str
+    model: str
     text: str
     gloss: str
     video_url: str
 
 
-@app.post("/sign2text")
-async def process_video(video_file: UploadFile = File(...)) -> Sign2TextResult:
+class LanguageModel(BaseModel):
+    id: str
+    name: str
+    language: str
+
+
+available_languages = [
+    LanguageModel(id="phoenix-2014t",
+                  name="RWTH-PHOENIX-Weather 2014 T", language="German Sign Language 德國手語"),
+    LanguageModel(id="csl-daily", name="Chinese Sign Language Corpus",
+                  language="Chinese Sign Language 中国手语"),
+    LanguageModel(id="tvb", name="TVB-HKSL-News",
+                  language="Hong Kong Sign Language 香港手語"),
+]
+
+
+@app.post("/")
+async def process_video(
+    model: Annotated[str, Form()] = Form(),
+    video_file: Annotated[UploadFile, File()] = File(),
+) -> Sign2TextResult:
     file_extension = video_file.filename.split(".")[-1]
 
     # Create temporary working directory
@@ -70,7 +92,8 @@ async def process_video(video_file: UploadFile = File(...)) -> Sign2TextResult:
                     vcodec="png",
                     format="image2"
                 )
-                .run(quiet=True)  # Suppress ffmpeg output
+                # Suppress ffmpeg output
+                .run(quiet=True, overwrite_output=True)
             )
 
             # copy video file to static serve directory
@@ -81,7 +104,8 @@ async def process_video(video_file: UploadFile = File(...)) -> Sign2TextResult:
                     os.path.join(
                         static_dir, f"{task_id}.mp4")
                 )
-                .run(quiet=True)  # Suppress ffmpeg output
+                # Suppress ffmpeg output
+                .run(quiet=True, overwrite_output=True)
             )
 
         except ffmpeg.Error as e:
@@ -97,19 +121,41 @@ async def process_video(video_file: UploadFile = File(...)) -> Sign2TextResult:
 
         features = feature_extraction_service.extract_feature(output_dir)
         text, gloss = prediction_service.predict(output_dir, features)
+        valkey_client.lpush("task:list", task_id)
         valkey_client.set(f'task:{task_id}:text', text)
         valkey_client.set(f'task:{task_id}:gloss', gloss)
-        return Sign2TextResult(id=task_id, task_type="S2T", gloss=gloss, text=text, video_url=f"/static/{task_id}.mp4")
+        valkey_client.set(f'task:{task_id}:task_type', "S2T")
+        valkey_client.set(f'task:{task_id}:model', model)
+        return Sign2TextResult(id=task_id, task_type="S2T", model=model, gloss=gloss, text=text, video_url=f"/static/{task_id}.mp4")
 
 
-@app.get("/sign2text/{task_id}")
+@app.get("/languages")
+def list_languages() -> List[LanguageModel]:
+    return available_languages
+
+
+@app.get("/{task_id}")
 def get_result(task_id: str) -> Sign2TextResult:
     text = valkey_client.get(f'task:{task_id}:text')
     gloss = valkey_client.get(f'task:{task_id}:gloss')
+    task_type = valkey_client.get(f'task:{task_id}:task_type')
+    model = valkey_client.get(f'task:{task_id}:model')
+    if text is None or gloss is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found"
+        )
     return Sign2TextResult(
         id=task_id,
-        task_type="S2T",
+        task_type=task_type,
+        model=model,
         text=text,
         gloss=gloss,
         video_url=f"/static/{task_id}.mp4",
     )
+
+
+@app.get("/")
+def list_result() -> List[Sign2TextResult]:
+    task_list = valkey_client.lrange('task:list', 0, -1)
+    return [get_result(task_id.decode()) for task_id in task_list]
