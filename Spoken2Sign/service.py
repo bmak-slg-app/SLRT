@@ -1,3 +1,6 @@
+import math
+import ffmpeg
+import bpy
 from motion_gen import GuassianBlur
 import numpy as np
 import torch
@@ -12,11 +15,14 @@ from human_body_prior.tools.model_loader import load_vposer
 from pydantic import BaseModel
 from collections.abc import Callable
 
+
 class GenerateResult(BaseModel):
     gloss: str
     gloss_frame_mapping: list[list[int]]
 
+
 dtype = torch.float32
+
 
 class Spoken2SignService:
     def __init__(self, config_file: str = "cfg_files/fit_smplsignx_tvb.yaml"):
@@ -29,7 +35,7 @@ class Spoken2SignService:
         self.device = device
 
         mapping = utils.smpl_to_openpose(model_type='smplx', use_hands=True, use_face=True,
-                                            use_face_contour=False, openpose_format='coco25')
+                                         use_face_contour=False, openpose_format='coco25')
         joint_mapper = utils.JointMapper(mapping)
 
         model_params = dict(model_path=args.get('model_folder'),
@@ -50,17 +56,18 @@ class Spoken2SignService:
         model_type = args.get('model_type', 'smplx')
         self.model_type = model_type
         print('[INFO] Model type:', model_type)
-        print('[INFO] Model folder: ',args.get('model_folder'))
+        print('[INFO] Model folder: ', args.get('model_folder'))
 
-        #-------------------------------------------------------Sign Connector---------------------------------------
+        # -------------------------------------------------------Sign Connector---------------------------------------
         joint_idx = np.array([3, 4, 6, 7, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
-                                37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
-                                53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66], dtype=np.int32)
+                              37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+                              53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66], dtype=np.int32)
         model = smplx.create(**model_params)
         model = model.to(device=device)
         self.model = model
         sign_connector = MLP(input_dim=len(joint_idx)*3*2+len(joint_idx))
-        sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth', map_location='cuda:0' if torch.cuda.is_available() else 'cpu'), strict=True)
+        sign_connector.load_state_dict(torch.load('../../data/connector_tvb_ep258.pth',
+                                       map_location='cuda:0' if torch.cuda.is_available() else 'cpu'), strict=True)
         sign_connector.to(device)
         sign_connector.eval()
         self.sign_connector = sign_connector
@@ -72,8 +79,8 @@ class Spoken2SignService:
         vposer_ckpt = args.get('vposer_ckpt', '')
         if use_vposer:
             pose_embedding = torch.zeros([batch_size, 32],
-                                            dtype=dtype, device=device,
-                                            requires_grad=True)
+                                         dtype=dtype, device=device,
+                                         requires_grad=True)
             vposer_ckpt = os.path.expandvars(vposer_ckpt)
             vposer, _ = load_vposer(vposer_ckpt, vp_model='snapshot')
             vposer = vposer.to(device=device)
@@ -81,7 +88,7 @@ class Spoken2SignService:
             self.vposer = vposer
         self.pose_embedding = pose_embedding
 
-        #-----------------------------------------------------Prepare Dict---------------------------------------------
+        # -----------------------------------------------------Prepare Dict---------------------------------------------
         with open('../../data/tvb_all.pkl', 'rb') as f:
             render_results_all = pickle.load(f)
         self.render_results_all = render_results_all
@@ -123,7 +130,8 @@ class Spoken2SignService:
 
             if id_idx != len(clips)-1:
                 clip_pre, clip_nex = clips[id_idx], clips[id_idx+1]
-                data_0, data_1 = render_results[clip_pre['end']-1], self.render_results_all[clip_nex['video_file']][clip_nex['start']]
+                data_0, data_1 = render_results[clip_pre['end'] -
+                                                1], self.render_results_all[clip_nex['video_file']][clip_nex['start']]
 
                 est_params_pre = {}
                 est_params_nex = {}
@@ -148,9 +156,10 @@ class Spoken2SignService:
                                 self.pose_embedding, output_type='aa').view(1, -1)
                             if self.model_type == 'smpl':
                                 wrist_pose = torch.zeros([body_pose.shape[0], 6],
-                                                        dtype=body_pose.dtype,
-                                                        device=body_pose.device)
-                                body_pose = torch.cat([body_pose, wrist_pose], dim=1)
+                                                         dtype=body_pose.dtype,
+                                                         device=body_pose.device)
+                                body_pose = torch.cat(
+                                    [body_pose, wrist_pose], dim=1)
                             est_params['body_pose'] = body_pose
                         # elif key == 'betas':
                         #     est_params[key] = torch.zeros([1, 10], dtype=dtype, device=device)
@@ -158,27 +167,32 @@ class Spoken2SignService:
                         #     est_params[key] = torch.zeros([1, 3], dtype=dtype, device=device)
                         else:
                             if k == 0:
-                                est_params[key] = torch.tensor(est_params_pre[key], dtype=dtype, device=self.device)
+                                est_params[key] = torch.tensor(
+                                    est_params_pre[key], dtype=dtype, device=self.device)
                             else:
-                                est_params[key] = torch.tensor(est_params_nex[key], dtype=dtype, device=self.device)
+                                est_params[key] = torch.tensor(
+                                    est_params_nex[key], dtype=dtype, device=self.device)
                     model_output = self.model(**est_params)
                     joints_location = model_output.joints
                     joints_idx = torch.tensor([3, 4, 6, 7, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
-                                            37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
-                                            53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
-                                            dtype=torch.int32).to(device=self.device)
-                    joints_location = torch.index_select(joints_location, 1, joints_idx)
+                                               37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+                                               53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66],
+                                              dtype=torch.int32).to(device=self.device)
+                    joints_location = torch.index_select(
+                        joints_location, 1, joints_idx)
                     if k == 0:
                         joints_location_pre = joints_location
                     else:
                         joints_location_nex = joints_location
-                joints_dis = torch.sqrt(((joints_location_pre-joints_location_nex)**2).sum(dim=-1))
-                joints_location_pre = joints_location_pre.reshape([1,-1])
-                joints_location_nex = joints_location_nex.reshape([1,-1])
+                joints_dis = torch.sqrt(
+                    ((joints_location_pre-joints_location_nex)**2).sum(dim=-1))
+                joints_location_pre = joints_location_pre.reshape([1, -1])
+                joints_location_nex = joints_location_nex.reshape([1, -1])
                 # print(joints_location_pre.shape, joints_location_nex.shape, joints_dis.shape)
 
-                len_inter = self.sign_connector(torch.cat((joints_location_pre, joints_location_nex, joints_dis), 1))
-                len_inter = max(round(len_inter.item()),1)
+                len_inter = self.sign_connector(
+                    torch.cat((joints_location_pre, joints_location_nex, joints_dis), 1))
+                len_inter = max(round(len_inter.item()), 1)
                 # print(len_inter)
 
                 weights = np.zeros(len_inter)
@@ -189,9 +203,11 @@ class Spoken2SignService:
                     est_params = {}
                     for key, val in data_0[0]['result'].items():
                         if key in ['body_pose', 'left_hand_pose', 'right_hand_pose']:
-                            est_params[key] = weight*data_0[1][key + '_rot'] +(1-weight)*data_1[1][key + '_rot']
+                            est_params[key] = weight*data_0[1][key +
+                                                               '_rot'] + (1-weight)*data_1[1][key + '_rot']
                         else:
-                            est_params[key] = weight*data_0[0]['result'][key] + (1-weight)*data_1[0]['result'][key]
+                            est_params[key] = weight*data_0[0]['result'][key] + \
+                                (1-weight)*data_1[0]['result'][key]
                     est_params_all.append(est_params)
                     inter_flag.append(True)
 
@@ -206,12 +222,14 @@ class Spoken2SignService:
                     est_params_all[i][key] = out_smooth[i].reshape(1, 3, 3)
             elif key == 'betas':
                 for i in range(len(est_params_all)):
-                    est_params_all[i][key] = np.asarray([[0.421,-1.658,0.361,0.314,0.226,0.065,0.175,-0.150,-0.097,-0.191]])
+                    est_params_all[i][key] = np.asarray(
+                        [[0.421, -1.658, 0.361, 0.314, 0.226, 0.065, 0.175, -0.150, -0.097, -0.191]])
             elif key == 'global_orient':
                 for i in range(len(est_params_all)):
-                    est_params_all[i][key] = np.asarray([[0,0,0]])
+                    est_params_all[i][key] = np.asarray([[0, 0, 0]])
             else:
-                date_temp = np.zeros([len(est_params_all), 1, est_params_all[0][key].shape[1]])
+                date_temp = np.zeros(
+                    [len(est_params_all), 1, est_params_all[0][key].shape[1]])
                 for i in range(len(est_params_all)):
                     date_temp[i] = est_params_all[i][key]
                 GuassianBlur_ = GuassianBlur(1)
@@ -237,11 +255,9 @@ class Spoken2SignService:
             gloss_frame_mapping=gloss_frame_mapping,
         )
 
+
 frame_rate = 12
 
-import bpy
-import ffmpeg
-import math
 
 def format_timestamp(time: float):
     milliseconds = math.floor((time - math.floor(time)) * 1000)
@@ -253,6 +269,7 @@ def format_timestamp(time: float):
     formatted_time = f"{hours:02d}:{minutes:02d}:{seconds:02d},{milliseconds:03d}"
     return formatted_time
 
+
 class RenderAvatarService:
     def __init__(
             self,
@@ -262,9 +279,10 @@ class RenderAvatarService:
             motions_dir: str = './motions',
             images_dir: str = './images',
             videos_dir: str = './videos',
-            ):
-        bpy.ops.preferences.addon_install(filepath = blender_addon_path, overwrite = True)
-        bpy.ops.preferences.addon_enable(module = 'smplx_blender_addon')
+    ):
+        bpy.ops.preferences.addon_install(
+            filepath=blender_addon_path, overwrite=True)
+        bpy.ops.preferences.addon_enable(module='smplx_blender_addon')
         bpy.ops.wm.save_userpref()
         bpy.ops.wm.open_mainfile(filepath=blender_mainfile)
 
@@ -275,7 +293,7 @@ class RenderAvatarService:
         bpy.data.scenes['Scene'].render.resolution_x = 512
         bpy.data.scenes['Scene'].render.fps = 60
         # bpy.data.objects["Camera"].location[0] = -0.02
-        bpy.data.objects["Camera"].location[1] = -0.85 #-0.725
+        bpy.data.objects["Camera"].location[1] = -0.85  # -0.725
         bpy.data.objects["Camera"].location[2] = 0.155
 
         bpy.context.view_layer.objects.active = bpy.data.objects[smplx_model_object]
@@ -292,7 +310,7 @@ class RenderAvatarService:
         video_id = f"custom-input-{task_id}"
         subtitle_fname = os.path.join(self.videos_dir, f"{video_id}.srt")
         video_dir = os.path.dirname(subtitle_fname)
-        if not os.path.exists(video_dir): # video id may contains slash
+        if not os.path.exists(video_dir):  # video id may contains slash
             os.makedirs(video_dir)
         gloss_lst = gloss.split()
         with open(subtitle_fname, "w") as subtitle_file:
@@ -305,16 +323,19 @@ class RenderAvatarService:
                         end_frame = gloss_frame_mapping[i + 1][0]
                 start_time = start_frame / frame_rate
                 end_time = end_frame / frame_rate
-                subtitle_file.write(f"{format_timestamp(start_time)} --> {format_timestamp(end_time)}\n")
+                subtitle_file.write(
+                    f"{format_timestamp(start_time)} --> {format_timestamp(end_time)}\n")
                 if karaoke:
-                    subtitle_file.write(f"<font color=\"#00ffff\">{' '.join(gloss_lst[:i+1])}</font>")
-                    subtitle_file.write(f"{' ' if i + 1 < len(gloss_lst) else ''}{' '.join(gloss_lst[i+1:])}")
+                    subtitle_file.write(
+                        f"<font color=\"#00ffff\">{' '.join(gloss_lst[:i+1])}</font>")
+                    subtitle_file.write(
+                        f"{' ' if i + 1 < len(gloss_lst) else ''}{' '.join(gloss_lst[i+1:])}")
                     subtitle_file.write("\n\n")
                 else:
                     subtitle_file.write(f"{gloss_item}\n\n")
         print(f"[INFO] subtitle for {video_id} generated at {subtitle_fname}")
 
-    def render_video(self, task_id: str):
+    def render_video(self, task_id: str, progress_callback: Callable[[float], None] = None):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
         motion_lst = os.listdir(motion_path)
@@ -343,7 +364,7 @@ class RenderAvatarService:
         bpy.data.scenes["Scene"].frame_end = current_frame
         bpy.ops.render.render(animation=True)
 
-    def render_images(self, task_id: str, progress_callback: Callable[[float], None]=None):
+    def render_images(self, task_id: str, progress_callback: Callable[[float], None] = None):
         video_id = f"custom-input-{task_id}"
         motion_path = os.path.join(self.motions_dir, video_id)
         motion_lst = os.listdir(motion_path)
@@ -357,7 +378,8 @@ class RenderAvatarService:
             bpy.context.view_layer.objects.active = bpy.data.objects[self.smplx_model_object]
             bpy.ops.object.smplx_load_pose(filepath=fname)
             bpy.ops.render.render()
-            bpy.data.images["Render Result"].save_render(os.path.join(img_dir, f"{i:03}.png"))
+            bpy.data.images["Render Result"].save_render(
+                os.path.join(img_dir, f"{i:03}.png"))
             if progress_callback is not None:
                 progress_callback((i + 1) / len(motion_lst))
 
@@ -366,4 +388,5 @@ class RenderAvatarService:
         video_dir = os.path.dirname(vid_fname)
         if not os.path.exists(video_dir):
             os.makedirs(video_dir)
-        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname, vf=f"subtitles={subtitle_fname}:force_style='FontSize=24'", pix_fmt="yuv420p").run()
+        ffmpeg.input(os.path.join(img_dir, "*.png"), pattern_type='glob', framerate=frame_rate).output(vid_fname,
+                                                                                                       vf=f"subtitles={subtitle_fname}:force_style='FontSize=24'", pix_fmt="yuv420p", overwrite_output=True).run()
