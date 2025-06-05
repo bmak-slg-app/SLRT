@@ -1,0 +1,47 @@
+[workspace]
+authors = ["Tommy Li <ktliac@connect.ust.hk>"]
+channels = ["conda-forge"]
+name = "Spoken2Sign"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+"start" = "uvicorn app:app --root-path '/spoken2sign' --port 8001"
+"start:worker" = "python worker.py"
+"start:t2g" = "cd text2gloss && uvicorn app:app --root-path '/text2gloss' --port 8081"
+
+[dependencies]
+python = "3.10.*"
+pytorch-gpu = "==1.13.1"
+torchvision = "==0.14.1"
+numpy = "<2"
+mmcv-full = "<2"
+valkey-py = ">=6.1.0,<7"
+ffmpeg-python = ">=0.2.0,<0.3"
+ffmpeg = ">=6.1.0,<7"
+pyrender = ">=0.1.45,<0.2"
+configargparse = ">=1.7.1,<2"
+tqdm = ">=4.67.1,<5"
+tensorboard = ">=2.19.0,<3"
+pydantic = ">=2.11.4,<3"
+fastapi = ">=0.115.12,<0.116"
+transformers = ">=4.35.2,<5"
+cxx-compiler = ">=1.9.0,<2"
+sentencepiece = ">=0.1.99,<0.2"
+
+[pypi-dependencies]
+bpy = ">=3.4.0, <4"
+human-body-prior = "==0.8.5.0"
+lintel = ">=0.1.0, <0.2"
+ctcdecode = { git = "https://github.com/parlance/ctcdecode.git" }
+opencc-python-reimplemented = ">=0.1.7, <0.2"
+
+[pypi-options]
+no-build-isolation = ["ctcdecode"]
+
+[system-requirements]
+libc = { family = "glibc", version = "2.17" }
+cuda = "11.7"
+
+[activation.env]
+LD_LIBRARY_PATH = "${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}"
