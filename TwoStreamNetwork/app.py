@@ -14,16 +14,6 @@ from service import FeatureExtractionService, PredictionService
 app = FastAPI()
 app.mount('/static', StaticFiles(directory="videos"), name="static")
 
-feature_extraction_service = FeatureExtractionService(
-    "experiments/configs/SingleStream/phoenix-2014t_s2g.yaml")
-prediction_service = PredictionService(
-    "experiments/configs/SingleStream/phoenix-2014t_s2t.yaml")
-
-static_dir = "./videos"
-BLOCK_SIZE = 1024 * 1024
-
-valkey_client = redis.Redis(host='localhost', port=6379, db=0)
-
 
 class Sign2TextResult(BaseModel):
     id: str
@@ -45,16 +35,33 @@ available_languages = [
                   name="RWTH-PHOENIX-Weather 2014 T", language="German Sign Language 德國手語"),
     LanguageModel(id="csl-daily", name="Chinese Sign Language Corpus",
                   language="Chinese Sign Language 中国手语"),
-    LanguageModel(id="tvb", name="TVB-HKSL-News",
-                  language="Hong Kong Sign Language 香港手語"),
+    # LanguageModel(id="tvb", name="TVB-HKSL-News",
+    #               language="Hong Kong Sign Language 香港手語"),
 ]
+
+feature_extraction_service = {language.id: FeatureExtractionService(
+    f"experiments/configs/SingleStream/{language.id}_s2g.yaml") for language in available_languages}
+prediction_service = {language.id: PredictionService(
+    f"experiments/configs/SingleStream/{language.id}_s2t.yaml") for language in available_languages}
+
+static_dir = "./videos"
+BLOCK_SIZE = 1024 * 1024
+
+valkey_client = redis.Redis(host='localhost', port=6379, db=0)
 
 
 @app.post("/")
 async def process_video(
-    model: Annotated[str, Form()] = Form(),
-    video_file: Annotated[UploadFile, File()] = File(),
+    model: Annotated[str, Form()],
+    video_file: Annotated[UploadFile, File()],
 ) -> Sign2TextResult:
+
+    if model not in [language.id for language in available_languages]:
+        raise HTTPException(
+            status_code=400,
+            detail="Model not found"
+        )
+
     file_extension = video_file.filename.split(".")[-1]
 
     # Create temporary working directory
@@ -119,8 +126,9 @@ async def process_video(
                 detail=f"Processing error: {str(e)}"
             )
 
-        features = feature_extraction_service.extract_feature(output_dir)
-        text, gloss = prediction_service.predict(output_dir, features)
+        features = feature_extraction_service[model].extract_feature(
+            output_dir)
+        text, gloss = prediction_service[model].predict(output_dir, features)
         valkey_client.lpush("task:list", task_id)
         valkey_client.set(f'task:{task_id}:text', text)
         valkey_client.set(f'task:{task_id}:gloss', gloss)
