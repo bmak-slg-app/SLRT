@@ -8,7 +8,7 @@ version = "0.1.0"
 [tasks]
 "start" = "uvicorn app:app --root-path '/spoken2sign' --port 8001"
 "start:worker" = "python worker.py"
-"start:t2g" = "cd text2gloss && uvicorn app:app --root-path '/text2gloss' --port 8081"
+"start:t2g" = { cwd = "text2gloss", cmd = "uvicorn app:app --root-path '/text2gloss' --port 8081" }
 
 [dependencies]
 python = "3.10.*"
@@ -29,6 +29,9 @@ transformers = ">=4.35.2,<5"
 cxx-compiler = ">=1.9.0,<2"
 sentencepiece = ">=0.1.99,<0.2"
 
+[feature.dev.dependencies]
+jupyterlab = ">=4.4.3,<5"
+
 [pypi-dependencies]
 bpy = ">=3.4.0, <4"
 human-body-prior = "==0.8.5.0"
@@ -45,3 +48,6 @@ cuda = "11.7"
 
 [activation.env]
 LD_LIBRARY_PATH = "${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}"
+
+[environments]
+dev = ["dev"]
