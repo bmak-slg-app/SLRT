@@ -29,13 +29,13 @@ model:
   TranslationNetwork_Ensemble:
     GlossEmbedding:
       freeze: false
-      gloss2embed_file: pretrained_models/mBart_de/gloss_embeddings.bin
+      gloss2embed_file: ../../pretrained_models/mBart_de/gloss_embeddings.bin
     GlossTokenizer:
-      gloss2id_file: pretrained_models/mBart_de/gloss2ids.pkl
+      gloss2id_file: ../../pretrained_models/mBart_de/gloss2ids.pkl
       src_lang: de_DGS
     TextTokenizer:
-      pretrained_model_name_or_path: pretrained_models/mBart_de
-      pruneids_file: pretrained_models/mBart_de/map_ids.pkl
+      pretrained_model_name_or_path: ../../pretrained_models/mBart_de
+      pruneids_file: ../../pretrained_models/mBart_de/map_ids.pkl
       tgt_lang: de_DE
     freeze_txt_embed: false
     label_smoothing: 0.2
@@ -46,4 +46,4 @@ model:
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
-    pretrained_model_name_or_path: pretrained_models/mBart_de
+    pretrained_model_name_or_path: ../../pretrained_models/mBart_de

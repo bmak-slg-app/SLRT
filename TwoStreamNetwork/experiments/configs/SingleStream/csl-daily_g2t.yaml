@@ -1,10 +1,10 @@
 task: G2T
 data:
   dataset_name: csl-daily
-  zip_file: data/csl-daily/csl-daily-videos.zip
-  train: data/csl-daily/csl-daily.train 
-  dev: data/csl-daily/csl-daily.dev
-  test: data/csl-daily/csl-daily.test
+  zip_file: ../../data/csl-daily/csl-daily-videos.zip
+  train: ../../data/csl-daily/csl-daily.train
+  dev: ../../data/csl-daily/csl-daily.dev
+  test: ../../data/csl-daily/csl-daily.test
   input_data: gloss
   level: char
   max_sent_length: 400
@@ -18,7 +18,7 @@ testing:
 training:
   batch_size: 8
   keep_last_ckpts: 20
-  model_dir: experiments/outputs/SingleStream/csl-daily_g2t
+  model_dir: ../../pretrained_models/SingleStream/csl-daily_g2t
   num_workers: 4
   optimization:
     betas:
@@ -47,20 +47,20 @@ model:
   TranslationNetwork:
     GlossEmbedding:
       freeze: true
-      gloss2embed_file: pretrained_models/mBart_zh/gloss_embeddings.bin 
+      gloss2embed_file: ../../pretrained_models/mBart_zh/gloss_embeddings.bin
     GlossTokenizer:
-      gloss2id_file: pretrained_models/mBart_zh/gloss2ids.pkl 
+      gloss2id_file: ../../pretrained_models/mBart_zh/gloss2ids.pkl
       src_lang: zh_CSL
     TextTokenizer:
-      pretrained_model_name_or_path: pretrained_models/mBart_zh/ 
-      pruneids_file: pretrained_models/mBart_zh/old2new_vocab.pkl 
+      pretrained_model_name_or_path: ../../pretrained_models/mBart_zh/
+      pruneids_file: ../../pretrained_models/mBart_zh/old2new_vocab.pkl
       tgt_lang: zh_CN
     freeze_txt_embed: true
     label_smoothing: 0.2
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
-    pretrained_model_name_or_path: pretrained_models/mBart_zh/
+    pretrained_model_name_or_path: ../../pretrained_models/mBart_zh/
   VLMapper:
     freeze: false
     type: embedding

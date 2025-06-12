@@ -1,11 +1,11 @@
 task: S2T
 data:
   dataset_name: csl-daily
-  zip_file: data/csl-daily/csl-daily-videos.zip
-  keypoint_file: data/csl-daily/csl-daily-keypoints.pkl
-  train: data/csl-daily/csl-daily.train 
-  dev: data/csl-daily/csl-daily.dev
-  test: data/csl-daily/csl-daily.test
+  zip_file: ../../data/csl-daily/csl-daily-videos.zip
+  keypoint_file: ../../data/csl-daily/csl-daily-keypoints.pkl
+  train: ../../data/csl-daily/csl-daily.train
+  dev: ../../data/csl-daily/csl-daily.dev
+  test: ../../data/csl-daily/csl-daily.test
   dev_head_keypoint_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/dev.pkl
   dev_head_rgb_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/dev.pkl
   test_head_keypoint_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/test.pkl
@@ -66,7 +66,7 @@ training:
 model:
   RecognitionNetwork:
     GlossTokenizer:
-      gloss2id_file: data/csl-daily/gloss2ids.pkl
+      gloss2id_file: ../../data/csl-daily/gloss2ids.pkl
     fuse_method: triplehead_cat_bilateral
     gloss_feature_ensemble: keypoint_gloss_probabilities
     heatmap_cfg:
@@ -82,7 +82,7 @@ model:
     keypoint_s3d:
       freeze_block: 0
       in_channel: 79
-      pretrained_ckpt: pretrained_models/s3ds_actioncls_ckpt
+      pretrained_ckpt: ../../pretrained_models/s3ds_actioncls_ckpt
       use_block: 4
     lateral:
       fusion_features:
@@ -102,7 +102,7 @@ model:
       version: v1
     s3d:
       freeze_block: 1
-      pretrained_ckpt: pretrained_models/s3ds_actioncls_ckpt
+      pretrained_ckpt: ../../pretrained_models/s3ds_actioncls_ckpt
       use_block: 4
     visual_head:
       ff_kernelsize:
@@ -114,20 +114,20 @@ model:
       pe: true
   TranslationNetwork:
     GlossEmbedding:
-      gloss2embed_file: pretrained_models/mBart_zh/gloss_embeddings.bin 
+      gloss2embed_file: ../../pretrained_models/mBart_zh/gloss_embeddings.bin
     GlossTokenizer:
-      gloss2id_file: pretrained_models/mBart_zh/gloss2ids.pkl 
+      gloss2id_file: ../../pretrained_models/mBart_zh/gloss2ids.pkl
       src_lang: zh_CSL
     TextTokenizer:
-      pretrained_model_name_or_path: pretrained_models/mBart_zh/ 
-      pruneids_file: pretrained_models/mBart_zh/old2new_vocab.pkl 
+      pretrained_model_name_or_path: ../../pretrained_models/mBart_zh/
+      pruneids_file: ../../pretrained_models/mBart_zh/old2new_vocab.pkl
       tgt_lang: zh_CN
     freeze_txt_embed: false
     label_smoothing: 0.2
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
-    pretrained_model_name_or_path: pretrained_models/mBart_zh/
+    pretrained_model_name_or_path: ../../pretrained_models/mBart_zh/
     load_ckpt: experiments/outputs/SingleStream/csl-daily_g2t/ckpts/step_1000.ckpt
   VLMapper:
     freeze: false

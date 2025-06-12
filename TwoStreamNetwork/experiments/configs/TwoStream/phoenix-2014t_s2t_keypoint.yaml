@@ -1,12 +1,12 @@
 task: S2T
 data:
   dataset_name: phoenix-2014t
-  dev: data/phoenix-2014t/phoenix-2014t.dev
-  test: data/phoenix-2014t/phoenix-2014t.test
-  train: data/phoenix-2014t/phoenix-2014t.train
-  keypoint_file: data/phoenix-2014t/phoenix-2014t-keypoints.pkl
+  dev: ../../data/phoenix-2014t/phoenix-2014t.dev
+  test: ../../data/phoenix-2014t/phoenix-2014t.test
+  train: ../../data/phoenix-2014t/phoenix-2014t.train
+  keypoint_file: ../../data/phoenix-2014t/phoenix-2014t-keypoints.pkl
   use_keypoints:
-    - pose 
+    - pose
     - mouth_half
     - hand
     - face_others_1_3
@@ -67,7 +67,7 @@ training:
 model:
   RecognitionNetwork:
     GlossTokenizer:
-      gloss2id_file: data/phoenix-2014t/gloss2ids.pkl
+      gloss2id_file: ../../data/phoenix-2014t/gloss2ids.pkl
     fuse_method: triplehead_cat_bilateral
     gloss_feature_ensemble: keypoint_gloss_feature
     heatmap_cfg:
@@ -79,7 +79,7 @@ model:
     keypoint_s3d:
       freeze_block: 0
       in_channel: 79
-      pretrained_ckpt: pretrained_models/s3ds_actioncls_ckpt
+      pretrained_ckpt: ../../pretrained_models/s3ds_actioncls_ckpt
       use_block: 4
     lateral:
       fusion_features:
@@ -99,7 +99,7 @@ model:
       version: v1
     s3d:
       freeze_block: 1
-      pretrained_ckpt: pretrained_models/s3ds_actioncls_ckpt
+      pretrained_ckpt: ../../pretrained_models/s3ds_actioncls_ckpt
       use_block: 4
     visual_head:
       ff_kernelsize:
@@ -112,13 +112,13 @@ model:
   TranslationNetwork:
     GlossEmbedding:
       freeze: false
-      gloss2embed_file: pretrained_models/mBart_de/gloss_embeddings.bin
+      gloss2embed_file: ../../pretrained_models/mBart_de/gloss_embeddings.bin
     GlossTokenizer:
-      gloss2id_file: pretrained_models/mBart_de/gloss2ids.pkl
+      gloss2id_file: ../../pretrained_models/mBart_de/gloss2ids.pkl
       src_lang: de_DGS
     TextTokenizer:
-      pretrained_model_name_or_path: pretrained_models/mBart_de
-      pruneids_file: pretrained_models/mBart_de/map_ids.pkl
+      pretrained_model_name_or_path: ../../pretrained_models/mBart_de
+      pruneids_file: ../../pretrained_models/mBart_de/map_ids.pkl
       tgt_lang: de_DE
     freeze_txt_embed: false
     label_smoothing: 0.2
@@ -126,7 +126,7 @@ model:
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
-    pretrained_model_name_or_path: pretrained_models/mBart_de
+    pretrained_model_name_or_path: ../../pretrained_models/mBart_de
   VLMapper:
     in_features: 512
     multistream_fuse: empty

@@ -1,12 +1,12 @@
 task: S2G
 data:
-  input_data: videos 
+  input_data: videos
   input_streams:
     - rgb
-  zip_file: data/phoenix-2014t/phoenix-2014t-videos.zip
-  dev: data/phoenix-2014t/phoenix-2014t_cleaned.dev
-  test: data/phoenix-2014t/phoenix-2014t_cleaned.test
-  train: data/phoenix-2014t/phoenix-2014t_cleaned.train
+  zip_file: ../../data/phoenix-2014t/phoenix-2014t-videos.zip
+  dev: ../../data/phoenix-2014t/phoenix-2014t_cleaned.dev
+  test: ../../data/phoenix-2014t/phoenix-2014t_cleaned.test
+  train: ../../data/phoenix-2014t/phoenix-2014t_cleaned.train
   dataset_name: phoenix-2014t
   level: word #word or char
   txt_lowercase: true
@@ -16,7 +16,7 @@ data:
     aug_hflip: false
     color_jitter: true
     bottom_area: 0.7
-    center_crop_size: 224 
+    center_crop_size: 224
     center_crop: True
     randomcrop_threshold: 1
     aspect_ratio_min: 0.75
@@ -30,13 +30,13 @@ testing:
       beam_size: 5
 training:
   overwrite: True
-  model_dir: experiments/outputs/SingleStream/phoenix-2014t_s2g
+  model_dir: ../../pretrained_models/SingleStream/phoenix-2014t_s2g
   shuffle: True
   num_workers: 4
-  batch_size: 1 
+  batch_size: 1
   total_epoch: 40
   keep_last_ckpts: 5
-  validation: 
+  validation:
     unit: epoch
     freq: 1
     cfg:
@@ -55,19 +55,16 @@ training:
 model:
   RecognitionNetwork:
     GlossTokenizer:
-      gloss2id_file: data/phoenix-2014t/gloss2ids_old.pkl
+      gloss2id_file: ../../data/phoenix-2014t/gloss2ids_old.pkl
     s3d:
-      pretrained_ckpt: pretrained_models/s3ds_glosscls_ckpt 
+      pretrained_ckpt: ../../pretrained_models/s3ds_glosscls_ckpt
       use_block: 4
       freeze_block: 1
     visual_head:
       input_size: 832
       hidden_size: 512
-      ff_size: 2048 
-      pe: True 
+      ff_size: 2048
+      pe: True
       ff_kernelsize:
         - 3
         - 3
-
-
-

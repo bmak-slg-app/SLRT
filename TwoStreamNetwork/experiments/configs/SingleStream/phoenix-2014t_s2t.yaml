@@ -1,16 +1,16 @@
 task: S2T
-data:  
+data:
   input_data: videos
   input_streams:
   - rgb
-  zip_file: data/PHOENIX/PHOENIX2014T_videos.zip
-  dev: data/phoenix-2014t/phoenix-2014t_cleaned.dev
-  test: data/phoenix-2014t/phoenix-2014t_cleaned.test
-  train: data/phoenix-2014t/phoenix-2014t_cleaned.train
+  zip_file: ../../data/PHOENIX/PHOENIX2014T_videos.zip
+  dev: ../../data/phoenix-2014t/phoenix-2014t_cleaned.dev
+  test: ../../data/phoenix-2014t/phoenix-2014t_cleaned.test
+  train: ../../data/phoenix-2014t/phoenix-2014t_cleaned.train
   dataset_name: phoenix-2014t
-  test_head_rgb_input: experiments/outputs/SingleStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/test.pkl
-  train_head_rgb_input: experiments/outputs/SingleStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/train.pkl
-  dev_head_rgb_input: experiments/outputs/SingleStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/dev.pkl
+  test_head_rgb_input: ../../pretrained_models/SingleStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/test.pkl
+  train_head_rgb_input: ../../pretrained_models/SingleStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/train.pkl
+  dev_head_rgb_input: ../../pretrained_models/SingleStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/dev.pkl
   level: word
   max_sent_length: 400
   txt_lowercase: true
@@ -25,8 +25,8 @@ testing:
 training:
   batch_size: 8
   keep_last_ckpts: 5
-  load_ckpt: experiments/outputs/SingleStream/phoenix-2014t_s2g/ckpts/best.ckpt
-  model_dir: experiments/outputs/SingleStream/phoenix-2014t_s2t
+  load_ckpt: ../../pretrained_models/SingleStream/phoenix-2014t_s2g/ckpts/best.ckpt
+  model_dir: ../../pretrained_models/SingleStream/phoenix-2014t_s2t
   num_workers: 4
   optimization:
     betas:
@@ -57,11 +57,11 @@ training:
 model:
   RecognitionNetwork:
     GlossTokenizer:
-      gloss2id_file: data/phoenix-2014t/gloss2ids_old.pkl
+      gloss2id_file: ../../data/phoenix-2014t/gloss2ids_old.pkl
     fuse_method: empty
     s3d:
       freeze_block: 1
-      pretrained_ckpt: pretrained_models/s3ds_actioncls_ckpt
+      pretrained_ckpt: ../../pretrained_models/s3ds_actioncls_ckpt
       use_block: 4
     visual_head:
       ff_kernelsize:
@@ -74,22 +74,21 @@ model:
   TranslationNetwork:
     GlossEmbedding:
       freeze: false
-      gloss2embed_file: pretrained_models/mBart_de/gloss_embeddings.bin
+      gloss2embed_file: ../../pretrained_models/mBart_de/gloss_embeddings.bin
     GlossTokenizer:
-      gloss2id_file: pretrained_models/mBart_de/gloss2ids.pkl
+      gloss2id_file: ../../pretrained_models/mBart_de/gloss2ids.pkl
       src_lang: de_DGS
     TextTokenizer:
-      pretrained_model_name_or_path: pretrained_models/mBart_de
-      pruneids_file: pretrained_models/mBart_de/map_ids.pkl
+      pretrained_model_name_or_path: ../../pretrained_models/mBart_de
+      pruneids_file: ../../pretrained_models/mBart_de/map_ids.pkl
       tgt_lang: de_DE
     freeze_txt_embed: false
     label_smoothing: 0.2
-    load_ckpt: experiments/outputs/SingleStream/phoenix-2014t_g2t/ckpts/best.ckpt
+    load_ckpt: ../../pretrained_models/SingleStream/phoenix-2014t_g2t/ckpts/best.ckpt
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
-    pretrained_model_name_or_path: pretrained_models/mBart_de
+    pretrained_model_name_or_path: ../../pretrained_models/mBart_de
   VLMapper:
     in_features: 512
     multistream_fuse: empty
-
