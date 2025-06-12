@@ -11,7 +11,7 @@ class Avatar(TypedDict):
 
 available_avatars = [
     Avatar(id="male", name="Male 男性"),
-    # Avatar(id="female", name="Female 女性"),
+    Avatar(id="female", name="Female 女性"),
 ]
 
 if __name__ == "__main__":
