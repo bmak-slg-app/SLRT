@@ -33,8 +33,8 @@ class LanguageModel(BaseModel):
 available_languages = [
     LanguageModel(id="phoenix-2014t",
                   name="RWTH-PHOENIX-Weather 2014 T", language="German Sign Language 德國手語"),
-    LanguageModel(id="csl-daily", name="Chinese Sign Language Corpus",
-                  language="Chinese Sign Language 中国手语"),
+    # LanguageModel(id="csl-daily", name="Chinese Sign Language Corpus",
+    #               language="Chinese Sign Language 中国手语"),
     # LanguageModel(id="tvb", name="TVB-HKSL-News",
     #               language="Hong Kong Sign Language 香港手語"),
 ]
