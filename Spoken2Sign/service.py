@@ -273,8 +273,8 @@ def format_timestamp(time: float):
 class RenderAvatarService:
     def __init__(
             self,
-            blender_addon_path: str = '../pretrained_models/smplx_blender_addon_300_20220623.zip',
-            blender_mainfile: str = '../pretrained_models/smplx_tommy.blend',
+            blender_addon_path: str = '../../pretrained_models/smplx_blender_addon_300_20220623.zip',
+            blender_mainfile: str = '../../pretrained_models/smplx_tommy.blend',
             smplx_model_object: str = 'SMPLX-female',
             motions_dir: str = './motions',
             images_dir: str = './images',
@@ -286,7 +286,8 @@ class RenderAvatarService:
         bpy.ops.wm.save_userpref()
         bpy.ops.wm.open_mainfile(filepath=blender_mainfile)
 
-        path = os.path.abspath('../pretrained_models/smplx_blender_addon/data')
+        path = os.path.abspath(
+            '../../pretrained_models/smplx_blender_addon/data')
         bpy.ops.file.find_missing_files(directory=path)
 
         bpy.data.scenes['Scene'].render.resolution_y = 512

@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # render_service = RenderAvatarService()
     render_service = {avatar['id']:
                       RenderAvatarService(
-                          blender_mainfile=f'../pretrained_models/smplx_tommy_{avatar["id"]}_backport.blend', smplx_model_object=f'SMPLX-{avatar["id"]}')
+                          blender_mainfile=f'../../pretrained_models/smplx_tommy_{avatar["id"]}_backport.blend', smplx_model_object=f'SMPLX-{avatar["id"]}')
                       for avatar in available_avatars
                       }
     print("[INFO] Worker is running...")
