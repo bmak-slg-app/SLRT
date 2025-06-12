@@ -1,13 +1,13 @@
 task: T2G
-data:  
+data:
   input_data: videos
   input_streams:
   - rgb
-  zip_file: ../../data/phoenix_2014t/PHOENIX2014T_videos.zip
-  dev: ../../data/phoenix_2014t/phoenix14t.dev
-  test: ../../data/phoenix_2014t/phoenix14t.test
-  train: ../../data/phoenix_2014t/phoenix14t.train
-  vocab_file: ../../data/phoenix_2014t/phoenix_iso_with_blank.vocab
+  zip_file: ../../../data/phoenix_2014t/PHOENIX2014T_videos.zip
+  dev: ../../../data/phoenix_2014t/phoenix14t.dev
+  test: ../../../data/phoenix_2014t/phoenix14t.test
+  train: ../../../data/phoenix_2014t/phoenix14t.train
+  vocab_file: ../../../data/phoenix_2014t/phoenix_iso_with_blank.vocab
   dataset_name: phoenix
   level: word
   max_sent_length: 400
@@ -57,11 +57,11 @@ training:
 model:
   # RecognitionNetwork:
   #   GlossTokenizer:
-  #     gloss2id_file: ../../data/phoenix_2014t/gloss2ids.pkl
+  #     gloss2id_file: ../../../data/phoenix_2014t/gloss2ids.pkl
   #   fuse_method: empty
   #   s3d:
   #     freeze_block: 1
-  #     pretrained_ckpt: ../../pretrained_models/s3ds_actioncls_ckpt
+  #     pretrained_ckpt: ../../../pretrained_models/s3ds_actioncls_ckpt
   #     use_block: 4
   #   visual_head:
   #     ff_kernelsize:
@@ -75,14 +75,14 @@ model:
     input_type: text
     GlossEmbedding:
       freeze: false
-      gloss2embed_file: ../../pretrained_models/mBart_de_t2g/gloss_embeddings.bin
+      gloss2embed_file: ../../../pretrained_models/mBart_de_t2g/gloss_embeddings.bin
     GlossTokenizer:
-      gloss2id_file: ../../pretrained_models/mBart_de_t2g/gloss2ids.pkl
+      gloss2id_file: ../../../pretrained_models/mBart_de_t2g/gloss2ids.pkl
       src_lang: de_DGS
     TextTokenizer:
-      pretrained_model_name_or_path: ../../pretrained_models/mBart_de_t2g
-      pruneids_file: ../../pretrained_models/mBart_de_t2g/map_ids.pkl
-      text2embed_file: ../../pretrained_models/mBart_de_t2g/text_embeddings.bin
+      pretrained_model_name_or_path: ../../../pretrained_models/mBart_de_t2g
+      pruneids_file: ../../../pretrained_models/mBart_de_t2g/map_ids.pkl
+      text2embed_file: ../../../pretrained_models/mBart_de_t2g/text_embeddings.bin
       tgt_lang: de_DE
     freeze_txt_embed: false
     label_smoothing: 0.2
@@ -90,8 +90,7 @@ model:
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
-    pretrained_model_name_or_path: ../../pretrained_models/mBart_de_t2g
+    pretrained_model_name_or_path: ../../../pretrained_models/mBart_de_t2g
   # VLMapper:
   #   in_features: 512
   #   multistream_fuse: empty
-
