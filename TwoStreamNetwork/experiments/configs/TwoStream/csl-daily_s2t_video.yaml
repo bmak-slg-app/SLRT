@@ -6,12 +6,12 @@ data:
   train: ../../data/csl-daily/csl-daily.train
   dev: ../../data/csl-daily/csl-daily.dev
   test: ../../data/csl-daily/csl-daily.test
-  dev_head_keypoint_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/dev.pkl
-  dev_head_rgb_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/dev.pkl
-  test_head_keypoint_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/test.pkl
-  test_head_rgb_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/test.pkl
-  train_head_keypoint_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/train.pkl
-  train_head_rgb_input: experiments/outputs/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/train.pkl
+  dev_head_keypoint_input: ../../pretrained_models/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/dev.pkl
+  dev_head_rgb_input: ../../pretrained_models/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/dev.pkl
+  test_head_keypoint_input: ../../pretrained_models/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/test.pkl
+  test_head_rgb_input: ../../pretrained_models/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/test.pkl
+  train_head_keypoint_input: ../../pretrained_models/TwoStream/csl-daily_s2g/extract_feature/head_keypoint_input/train.pkl
+  train_head_rgb_input: ../../pretrained_models/TwoStream/csl-daily_s2g/extract_feature/head_rgb_input/train.pkl
   input_data: videos
   input_streams:
   - keypoint
@@ -35,8 +35,8 @@ testing:
 training:
   batch_size: 8
   keep_last_ckpts: 5
-  load_ckpt: experiments/outputs/TwoStream/csl-daily_s2g/ckpts/best.ckpt
-  model_dir: experiments/outputs/TwoStream/csl-daily_s2t_video
+  load_ckpt: ../../pretrained_models/TwoStream/csl-daily_s2g/ckpts/best.ckpt
+  model_dir: ../../pretrained_models/TwoStream/csl-daily_s2t_video
   num_workers: 4
   optimization:
     betas:
@@ -128,7 +128,7 @@ model:
       attention_dropout: 0.1
       dropout: 0.3
     pretrained_model_name_or_path: ../../pretrained_models/mBart_zh/
-    load_ckpt: experiments/outputs/SingleStream/csl-daily_g2t/ckpts/step_1000.ckpt
+    load_ckpt: ../../pretrained_models/SingleStream/csl-daily_g2t/ckpts/step_1000.ckpt
   VLMapper:
     freeze: false
     type: embedding

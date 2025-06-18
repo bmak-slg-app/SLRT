@@ -10,12 +10,12 @@ data:
     - mouth_half
     - hand
     - face_others_1_3
-  dev_head_keypoint_input: experiments/outputs/TwoStream/phoenix-2014t_s2g/extract_feature/head_keypoint_input/dev.pkl
-  dev_head_rgb_input: experiments/outputs/TwoStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/dev.pkl
-  test_head_keypoint_input: experiments/outputs/TwoStream/phoenix-2014t_s2g/extract_feature/head_keypoint_input/test.pkl
-  test_head_rgb_input: experiments/outputs/TwoStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/test.pkl
-  train_head_keypoint_input: experiments/outputs/TwoStream/phoenix-2014t_s2g/extract_feature/head_keypoint_input/train.pkl
-  train_head_rgb_input: experiments/outputs/TwoStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/train.pkl
+  dev_head_keypoint_input: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/extract_feature/head_keypoint_input/dev.pkl
+  dev_head_rgb_input: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/dev.pkl
+  test_head_keypoint_input: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/extract_feature/head_keypoint_input/test.pkl
+  test_head_rgb_input: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/test.pkl
+  train_head_keypoint_input: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/extract_feature/head_keypoint_input/train.pkl
+  train_head_rgb_input: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/extract_feature/head_rgb_input/train.pkl
   input_data: feature
   input_streams:
   - keypoint
@@ -34,8 +34,8 @@ testing:
 training:
   batch_size: 8
   keep_last_ckpts: 5
-  load_ckpt: experiments/outputs/TwoStream/phoenix-2014t_s2g/ckpts/best.ckpt
-  model_dir: experiments/outputs/TwoStream/phoenix-2014t_s2t_joint
+  load_ckpt: ../../pretrained_models/TwoStream/phoenix-2014t_s2g/ckpts/best.ckpt
+  model_dir: ../../pretrained_models/TwoStream/phoenix-2014t_s2t_joint
   num_workers: 4
   optimization:
     betas:
@@ -122,7 +122,7 @@ model:
       tgt_lang: de_DE
     freeze_txt_embed: false
     label_smoothing: 0.2
-    load_ckpt: experiments/outputs/SingleStream/phoenix-2014t_g2t/ckpts/best.ckpt
+    load_ckpt: ../../pretrained_models/SingleStream/phoenix-2014t_g2t/ckpts/best.ckpt
     overwrite_cfg:
       attention_dropout: 0.1
       dropout: 0.3
