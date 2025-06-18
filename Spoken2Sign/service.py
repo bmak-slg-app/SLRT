@@ -299,6 +299,10 @@ class RenderAvatarService:
 
         bpy.context.view_layer.objects.active = bpy.data.objects[smplx_model_object]
 
+        bpy.context.scene.render.engine = 'CYCLES'
+        bpy.context.preferences.addons['cycles'].preferences.compute_device_type = 'CUDA'
+        bpy.context.scene.cycles.device = 'GPU'
+
         self.motions_dir = motions_dir
         self.videos_dir = videos_dir
         self.images_dir = images_dir
