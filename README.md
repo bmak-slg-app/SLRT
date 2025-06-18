@@ -1,5 +1,19 @@
 # Sign Language Processing
 
+This repo is a fork of [Sign Language Recognition and Translation](https://github.com/FangyunWei/SLRT)
+for Signify mobile application to demonstrate the result of the papers in the
+repository. This repository contains additional files for running an API server
+to support the mobile application. It also introduces `pixi` package management
+to simplify the installation of the dependencies.
+
+## Deploying the API server
+
+The deployment guide can be found in [bmak-slg-app/deployment](https://github.com/bmak-slg-app/deployment).
+It contains the instructions to deploy the API server, alongside a full list of
+resources required to run the server.
+
+## Papers
+
 This repo contains the official implementations of the following papers on sign language processing:
 
 - [EMNLP 2024] Towards Online Continuous Sign Language Recognition and Translation [[Paper]](https://arxiv.org/abs/2401.05336v2) [[Code]](https://github.com/FangyunWei/SLRT/tree/main/Online)
